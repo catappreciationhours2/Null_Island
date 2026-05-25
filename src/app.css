@@ -1,0 +1,33 @@
+@import "tailwindcss/theme";
+
+@theme {
+  --color-bg: var(--bg);
+  --color-mainText: var(--text);
+  --color-accent: var(--accent);
+  --color-panel: var(--panel);
+}
+
+/* --- THEME STYLING CONFIG --- */
+:root, [data-theme="cottage"] {
+  --bg-color: #f4eae1;       /* Warm cozy cream */
+  --text-color: #3d261e;     /* Deep earthy brown */
+  --accent-color: #608056;   /* Cottage forest green */
+  --panel-bg: #eaddcf;       /* Wooden card backing */
+  --font-style: 'Press Start 2P', monospace; /* Pixel font vibe */
+}
+
+[data-theme="hacker"] {
+  --bg-color: #0d1117;       /* Dark terminal black */
+  --text-color: #00ff66;     /* Matrix bright green */
+  --accent-color: #00aa44;   /* Dimmer terminal green */
+  --panel-bg: #161b22;       /* Sleek terminal console box */
+  --font-style: 'JetBrains Mono', monospace; /* Hacker font */
+}
+
+/* Map your custom variables globally */
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: var(--font-style);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
