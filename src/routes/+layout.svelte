@@ -1,29 +1,21 @@
 <script>
 	import '../app.css';
+	// import TopBar from '$lib/components/TopBar.svelte'; // 1. Import your component
+	import { onMount } from 'svelte';
+	import { player, tasks, theme } from '$lib/stores';
 
-	let currentTheme = $state('cottage'); //reactive declaration with $
-
-	function toggleTheme() {
-		currentTheme = currentTheme === 'cottage' ? 'hacker' : 'cottage';
-	}
-
-	$effect(() => {
-		if (typeof document != 'undefined') {
-			document.documentElement.setAttribute('data-theme', currentTheme)
-		}
+	// 2. Boot up the local browser data stream when the website mounts
+	onMount(async () => {
+		theme.init(); // Apply saved theme
+		await player.load(); // Fetch historical save game stats from IndexedDB
+		await tasks.load();  // Fetch your saved todo items from IndexedDB
 	});
 
-	// Snippets/Slots let your pages inherit functions from the layout
 	let { children } = $props();
 </script>
 
-<header class="p-4 flex justify-end">
-	<button 
-		onclick={toggleTheme} 
-		class="px-4 py-2 border-2 border-current rounded font-bold cursor-pointer transition-transform active:scale-95"
-	>
-		Toggle System Mode
-	</button>
-</header>
+<!-- <TopBar /> -->
 
-{@render children()}
+<main class="w-full">
+	{@render children()}
+</main>

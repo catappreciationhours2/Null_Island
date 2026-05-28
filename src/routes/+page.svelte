@@ -1,22 +1,47 @@
-<main class="max-w-2xl mx-auto p-8 text-center">
-	<div class="mb-10">
-		<h1 class="text-4xl font-bold tracking-tight mb-2">NULL_ISLAND</h1>
-		<p class="opacity-70">A gamified task spatial grid system.</p>
-	</div>
+<script>
+  import { onMount } from 'svelte';
+  import { appState } from '$lib/stores/appState.svelte.js';
 
-	<div style="background-color: var(--panel); border-color: var(--text);" class="border-2 rounded-xl p-8 text-left shadow-lg transition-colors">
-		<h2 class="text-xl font-bold mb-4">📍 Initialized Coordinates: [0, 0]</h2>
-		<p class="text-sm leading-relaxed mb-6">
-			Notice that this panel has no hardcoded hex colors or Tailwind colors! It is reading completely from <code>var(--panel)</code>. When you click the toggle button in the top right corner, this box will magically transition between a cozy cottage card and a dark terminal console shell.
-		</p>
-		
-		<div class="flex gap-2">
-			<span style="background-color: var(--accent);" class="px-3 py-1 rounded text-xs text-white font-bold">
-				Status: Live
-			</span>
-			<span style="background-color: var(--text); color: var(--bg);" class="px-3 py-1 rounded text-xs font-bold font-mono">
-				v0.1.0
-			</span>
-		</div>
-	</div>
-</main>
+  import TopBar        from '$lib/components/TopBar.svelte';
+  import Sidebar       from '$lib/components/Sidebar.svelte';
+  import Notifications from '$lib/components/Notifications.svelte';
+  import TasksView     from '$lib/components/TasksView.svelte';
+  import MapView       from '$lib/components/MapView.svelte';
+  import ProfileView   from '$lib/components/ProfileView.svelte';
+  import AwardsView    from '$lib/components/AwardsView.svelte';
+  import ShopView      from '$lib/components/ShopView.svelte';
+
+  onMount(() => {
+    const saved = localStorage.getItem('hw-theme') || 'cottage';
+    appState.theme = saved;
+    document.documentElement.dataset.theme = saved;
+  });
+</script>
+
+<div class="app-shell">
+  <TopBar />
+  <div class="body-row">
+    <Sidebar />
+    <main class="main-content">
+      {#if appState.activeTab === 'tasks'}
+        <TasksView />
+      {:else if appState.activeTab === 'map'}
+        <MapView />
+      {:else if appState.activeTab === 'profile'}
+        <ProfileView />
+      {:else if appState.activeTab === 'awards'}
+        <AwardsView />
+      {:else if appState.activeTab === 'shop'}
+        <ShopView />
+      {/if}
+    </main>
+  </div>
+</div>
+
+<Notifications />
+
+<style>
+  .app-shell { display:flex; flex-direction:column; height:100dvh; overflow:hidden; zoom:1.5; }
+  .body-row  { display:flex; flex:1; overflow:hidden; }
+  .main-content { flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg); transition:background .2s; }
+</style>

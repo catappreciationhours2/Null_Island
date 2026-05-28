@@ -1,33 +1,147 @@
-@import "tailwindcss/theme";
+@import "tailwindcss";
 
-@theme {
-  --color-bg: var(--bg);
-  --color-mainText: var(--text);
-  --color-accent: var(--accent);
-  --color-panel: var(--panel);
+/* ── FONTS ── */
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=EB+Garamond:wght@400;500&family=Share+Tech+Mono&display=swap');
+
+/* ── COTTAGE CORE ── */
+[data-theme="cottage"] {
+  --bg:         #f5f0e8;
+  --bg2:        #ede6d6;
+  --bg3:        #e4dbc8;
+  --surface:    #faf7f2;
+  --border:     #c9b99a;
+  --border2:    #b8a488;
+  --text:       #3d2f1e;
+  --text2:      #7a6248;
+  --text3:      #a08060;
+  --accent:     #7a9e5e;
+  --accent2:    #c07030;
+  --accent3:    #5b7fa6;
+  --xp:         #7a9e5e;
+  --hp:         #c94040;
+  --gold:       #c07030;
+  --gold-light: #e8a84a;
+  --tag-easy:   #7a9e5e;
+  --tag-med:    #c07030;
+  --tag-hard:   #c94040;
+
+  --font-ui:    'Lora', Georgia, serif;
+  --font-body:  'EB Garamond', serif;
+  --font-mono:  'Share Tech Mono', monospace;
+  --radius:     6px;
+  --radius-lg:  10px;
+
+  /* scrollbar */
+  --scroll-track: #ede6d6;
+  --scroll-thumb: #c9b99a;
+
+  /* sidebar width */
+  --sidebar-w: 190px;
 }
 
-/* --- THEME STYLING CONFIG --- */
-:root, [data-theme="cottage"] {
-  --bg-color: #f4eae1;       /* Warm cozy cream */
-  --text-color: #3d261e;     /* Deep earthy brown */
-  --accent-color: #608056;   /* Cottage forest green */
-  --panel-bg: #eaddcf;       /* Wooden card backing */
-  --font-style: 'Press Start 2P', monospace; /* Pixel font vibe */
-}
-
+/* ── HACKER ── */
 [data-theme="hacker"] {
-  --bg-color: #0d1117;       /* Dark terminal black */
-  --text-color: #00ff66;     /* Matrix bright green */
-  --accent-color: #00aa44;   /* Dimmer terminal green */
-  --panel-bg: #161b22;       /* Sleek terminal console box */
-  --font-style: 'JetBrains Mono', monospace; /* Hacker font */
+  --bg:         #090d09;
+  --bg2:        #0d120d;
+  --bg3:        #111811;
+  --surface:    #0b0f0b;
+  --border:     #1c3a1c;
+  --border2:    #2a4a2a;
+  --text:       #88ee88;
+  --text2:      #55bb55;
+  --text3:      #2d7a2d;
+  --accent:     #00ff41;
+  --accent2:    #ffb800;
+  --accent3:    #00b4ff;
+  --xp:         #00ff41;
+  --hp:         #ff3333;
+  --gold:       #ffb800;
+  --gold-light: #ffd060;
+  --tag-easy:   #00ff41;
+  --tag-med:    #ffb800;
+  --tag-hard:   #ff3333;
+
+  --font-ui:    'Share Tech Mono', monospace;
+  --font-body:  'Share Tech Mono', monospace;
+  --font-mono:  'Share Tech Mono', monospace;
+  --radius:     2px;
+  --radius-lg:  3px;
+
+  --scroll-track: #0d120d;
+  --scroll-thumb: #1c3a1c;
+
+  --sidebar-w: 190px;
 }
 
-/* Map your custom variables globally */
-body {
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  font-family: var(--font-style);
-  transition: background-color 0.3s ease, color 0.3s ease;
+/* ── GLOBAL RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background 0.25s, color 0.25s;
+  overflow: hidden;
+}
+
+/* ── SCROLLBARS ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--scroll-track); }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 3px; }
+
+/* ── SHARED COMPONENTS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.btn:hover { background: var(--border); color: var(--text); }
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+.btn.primary:hover { opacity: 0.85; }
+[data-theme="hacker"] .btn { letter-spacing: 0.5px; }
+
+.tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: var(--radius);
+  font-size: 10px;
+  border: 1px solid;
+  font-family: var(--font-mono);
+}
+.tag.easy  { color: var(--tag-easy);  border-color: var(--tag-easy); }
+.tag.med   { color: var(--tag-med);   border-color: var(--tag-med); }
+.tag.hard  { color: var(--tag-hard);  border-color: var(--tag-hard); }
+
+/* ── PIXEL-STYLE SCANLINE for hacker bg ── */
+[data-theme="hacker"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,255,65,0.015) 2px,
+    rgba(0,255,65,0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
 }
