@@ -196,22 +196,25 @@ export const appState = $state({
 
   player:       load('hw-player',    DEFAULT_PLAYER),
   tasks:        load('hw-tasks',     []),
-  taskHistory:  load('hw-history',   []),   // completed + collected tasks forever
+  taskHistory:  load('hw-history',   []),
   awards:       load('hw-awards',    DEFAULT_AWARDS),
   monthlyAwards:load('hw-monthly',   DEFAULT_MONTHLY),
   inventory:    load('hw-inventory', DEFAULT_INVENTORY),
-  shopItems:    SHOP_DEFAULT_ITEMS,         // not persisted — always fresh from source
+  shopItems:    SHOP_DEFAULT_ITEMS,
 
   notifications: [],
   _notifId: 0,
 
   // Shop state
-  shopTab: 'browse',   // 'browse' | 'craft'
+  shopTab: 'browse',
   activeCraftsman: null,
   craftConversation: [],
 
   // Profile sub-tab
-  profileTab: 'overview',  // 'overview' | 'history'
+  profileTab: 'overview',
+
+  // Map snapshots — array of { id, dataUrl, label, savedAt }
+  mapSnapshots: load('hw-map-snapshots', []),
 });
 
 // ─────────────────────────────────────────
@@ -317,7 +320,6 @@ export function tickChunk(taskId) {
       'info'
     );
   }
-
 }
 
 // @ts-ignore
@@ -494,48 +496,40 @@ export function buyItem(shopItemId) {
   );
 }
 
+// visitCraftsman opens the chat for free — gold charged only on commission
 // @ts-ignore
 export function visitCraftsman(craftsmanId) {
   const npc = NPC_CRAFTSMEN.find(n => n.id === craftsmanId);
   if (!npc) return false;
-  if (appState.player.gold < npc.cost) {
-    notify(
-      appState.theme === 'hacker'
-        ? `> INSUFFICIENT FUNDS: visit costs ${npc.cost}G`
-        : `Need ${npc.cost} gold to visit ${npc.name} 💰`,
-      'warn'
-    );
-    return false;
-  }
-  appState.player.gold -= npc.cost;
+  // No gold deduction here — charged in ShopView when commission is submitted
   // @ts-ignore
   appState.activeCraftsman = npc;
   appState.shopTab = 'craft';
   const greeting = npc.greetings[Math.floor(Math.random() * npc.greetings.length)];
-  appState.craftConversation = [
-    // @ts-ignore
-    { role: 'npc', text: greeting }
-  ];
+  // @ts-ignore
+  appState.craftConversation = [{ role: 'npc', text: greeting }];
   return true;
 }
 
+// imageDataUrl is a base64 PNG already resized to 48x48 by ShopView
 // @ts-ignore
-export function submitCustomItem(itemLabel, itemIcon, itemDesc) {
+export function submitCustomItem(itemLabel, imageDataUrl, itemDesc) {
   const npc = appState.activeCraftsman;
   if (!npc) return;
 
   const newItem = {
-    id:       crypto.randomUUID(),
-    label:    itemLabel,
-    icon:     itemIcon || '✨',
-    rarity:   'epic',
+    id:        crypto.randomUUID(),
+    label:     itemLabel,
+    icon:      imageDataUrl,  // base64 PNG dataUrl
+    isImage:   true,          // flag so inventory renders <img> not emoji
+    rarity:    'epic',
     // @ts-ignore
-    type:     npc.itemType,
+    type:      npc.itemType,
     // @ts-ignore
-    desc:     itemDesc || `Custom ${npc.itemType} crafted by ${npc.name}.`,
-    equipped: false,
-    equip:    null,
-    custom:   true,
+    desc:      itemDesc || `Custom ${npc.itemType} crafted by ${npc.name}.`,
+    equipped:  false,
+    equip:     null,
+    custom:    true,
     // @ts-ignore
     craftedBy: npc.name,
   };
@@ -548,9 +542,9 @@ export function submitCustomItem(itemLabel, itemIcon, itemDesc) {
 
   notify(
     appState.theme === 'hacker'
-      ? `> CUSTOM ITEM CRAFTED: ${itemLabel}`
+      ? `> ITEM CRAFTED: ${itemLabel} added to inventory`
       // @ts-ignore
-      : `✨ ${npc.name} crafted: ${itemLabel}!`,
+      : `✨ ${npc.name} crafted: ${itemLabel}! Check your inventory.`,
     'success'
   );
 }

@@ -41,7 +41,7 @@
 <Notifications />
 
 <style>
-  .app-shell { display:flex; flex-direction:column; height:100dvh; overflow:hidden; zoom:1.5; }
+  .app-shell { display:flex; flex-direction:column; height:100dvh; overflow:hidden; }
   .body-row  { display:flex; flex:1; overflow:hidden; }
   .main-content { flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg); transition:background .2s; }
 </style>

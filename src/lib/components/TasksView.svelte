@@ -21,7 +21,7 @@
   // ── Hacker terminal ──
   let termInput    = $state('');
   let termHistory  = $state([
-    { type: 'sys', text: 'HEARTHWARD_OS v2.0 — task management subsystem' },
+    { type: 'sys', text: 'NULL_ISLAND v2.0 — task management subsystem' },
     { type: 'sys', text: 'Type "help" for available commands.' },
   ]);
   let termEl       = $state(null);
@@ -83,7 +83,7 @@
     // ── clear ──
     } else if (cmd === 'clear') {
       termHistory.length = 0;
-      termHistory.push({ type: 'sys', text: 'Terminal cleared. HEARTHWARD_OS ready.' });
+      termHistory.push({ type: 'sys', text: 'Terminal cleared. NULL_ISLAND ready.' });
 
     // ── new ──
     } else if (cmd === 'new') {
@@ -336,7 +336,7 @@
         <span class="term-dot red"></span>
         <span class="term-dot yellow"></span>
         <span class="term-dot green"></span>
-        <span class="term-title">hearthward — task_mgr.sh — root@aevyn</span>
+        <span class="term-title">null_island — task_mgr.sh — root@aevyn</span>
       </div>
       <div class="term-body" bind:this={termEl}>
         {#each termHistory as line, i (i)}
@@ -358,7 +358,7 @@
         {/each}
       </div>
       <div class="term-inputrow">
-        <span class="term-prompt">root@hearthward:~$</span>
+        <span class="term-prompt">root@null_island:~$</span>
         <input
           class="term-input"
           type="text"
