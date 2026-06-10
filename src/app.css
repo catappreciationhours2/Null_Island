@@ -73,6 +73,40 @@
   --sidebar-w: 190px;
 }
 
+/* ═══════════════════════════════════════════
+   RETRO / PAC-MAN THEME
+═══════════════════════════════════════════ */
+[data-theme="retro"] {
+  --bg:          #0a0010;
+  --bg2:         #0f0018;
+  --bg3:         #150020;
+  --surface:     #0c0015;
+  --border:      #3300aa;
+  --border2:     #5500cc;
+  --text:        #ffee00;
+  --text2:       #ff8800;
+  --text3:       #aa5500;
+  --accent:      #ffee00;
+  --accent2:     #ff4400;
+  --accent3:     #00ccff;
+  --xp-color:    #00ff88;
+  --hp-color:    #ff0044;
+  --gold-color:  #ffbb00;
+  --gold-light:  #ffdd44;
+  --easy:        #00ff88;
+  --med:         #ffbb00;
+  --hard:        #ff4400;
+  --font-ui:     'Share Tech Mono', monospace;
+  --font-body:   'Share Tech Mono', monospace;
+  --font-mono:   'Share Tech Mono', monospace;
+  --radius:      0px;
+  --radius-lg:   2px;
+  --sidebar-w:   192px;
+  --topbar-h:    48px;
+  --shadow:      0 0 12px rgba(255,238,0,0.15);
+  --shadow-lg:   0 0 24px rgba(255,238,0,0.2);
+}
+
 /* ── GLOBAL RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -144,4 +178,30 @@ html, body {
   );
   pointer-events: none;
   z-index: 9999;
+}
+
+/* Retro scanlines + grid */
+[data-theme="retro"] body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,238,0,0.025) 3px, rgba(255,238,0,0.025) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,200,0.018) 3px, rgba(0,0,200,0.018) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Retro button style — sharp, neon-bordered */
+[data-theme="retro"] .btn {
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  font-size: 10px;
+  text-transform: uppercase;
+  border-radius: 0;
+}
+[data-theme="retro"] .btn.primary {
+  background: #ffee00;
+  color: #0a0010;
+  border-color: #ffee00;
+  box-shadow: 0 0 8px #ffee0088;
 }

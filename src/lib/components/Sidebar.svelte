@@ -1,8 +1,10 @@
 <script>
-  import { appState, createTask } from '$lib/stores/appState.svelte.js';
+  import { appState } from '$lib/stores/appState.svelte.js';
   import { onMount } from 'svelte';
 
-  let isHacker = $derived(appState.theme === 'hacker');
+  let theme    = $derived(appState.theme);
+  let isHacker = $derived(theme === 'hacker');
+  let isRetro  = $derived(theme === 'retro');
   let p        = $derived(appState.player);
 
   let xpInLevel = $derived(p.xp % 500);
@@ -13,9 +15,10 @@
     const titles = {
       cottage: ['Seedling','Apprentice Maker','Journeyman','Artisan','Craftmaster','Elder Weaver'],
       hacker:  ['INIT_USER','APPRENTICE_DEV','JOURNEYMAN','SENIOR_PROC','ARCH_MASTER','ROOT_ACCESS'],
+      retro:   ['1-UP','LEVEL 2','POWER-UP','BOSS STAGE','HIGH SCORE','INSERT COIN'],
     };
     // @ts-ignore
-    const arr = titles[appState.theme] || titles.cottage;
+    const arr = titles[theme] || titles.cottage;
     return arr[Math.min(lvl - 1, arr.length - 1)];
   });
 
@@ -24,41 +27,64 @@
   // @ts-ignore
   let toCollect = $derived(appState.tasks.filter(t => t.doneChunks >= t.chunks && !t.collected).length);
 
-  // ── Pixel sprite ──
+  // Sprite
   // @ts-ignore
   let canvas;
   // @ts-ignore
-  function drawSprite(el, theme) {
+  function drawSprite(el, thm) {
     if (!el) return;
     const ctx = el.getContext('2d');
     ctx.clearRect(0, 0, 48, 48);
     ctx.imageSmoothingEnabled = false;
-    const isH = theme === 'hacker';
-    const pal = isH
-      ? { skin:'#00ff41', hair:'#003300', shirt:'#003300', pants:'#001400' }
-      : { skin:'#f5c89a', hair:'#7a4020', shirt:'#5b7fa6', pants:'#3d2f1e' };
     const S = 3;
-    // @ts-ignore
-    const px = (x,y,c) => { ctx.fillStyle = pal[c]; ctx.fillRect(x*S, y*S, S, S); };
-    [
-      [5,3,'hair'],[6,3,'hair'],[7,3,'hair'],[8,3,'hair'],
-      [5,4,'skin'],[6,4,'skin'],[7,4,'skin'],[8,4,'skin'],
-      [5,5,'skin'],[6,5,'skin'],[7,5,'skin'],[8,5,'skin'],
-      [4,6,'shirt'],[5,6,'shirt'],[6,6,'shirt'],[7,6,'shirt'],[8,6,'shirt'],[9,6,'shirt'],
-      [4,7,'shirt'],[5,7,'shirt'],[6,7,'shirt'],[7,7,'shirt'],[8,7,'shirt'],[9,7,'shirt'],
-      [4,8,'shirt'],[5,8,'shirt'],[6,8,'shirt'],[7,8,'shirt'],[8,8,'shirt'],[9,8,'shirt'],
-      [5,9,'pants'],[6,9,'pants'],[7,9,'pants'],[8,9,'pants'],
-      [5,10,'pants'],[6,10,'pants'],[7,10,'pants'],[8,10,'pants'],
-      [4,11,'pants'],[5,11,'pants'],[7,11,'pants'],[8,11,'pants'],
-    ].forEach(([x,y,c]) => px(x,y,c));
-    if (isH) { ctx.fillStyle='#00ff41'; ctx.font='7px monospace'; ctx.fillText('> _', 2, 47); }
+
+    if (thm === 'retro') {
+      // Draw Pac-Man!
+      ctx.fillStyle = '#ffee00';
+      ctx.beginPath();
+      ctx.arc(24, 24, 18, 0.25*Math.PI, 1.75*Math.PI);
+      ctx.lineTo(24, 24);
+      ctx.closePath();
+      ctx.fill();
+      // Eye
+      ctx.fillStyle = '#0a0010';
+      ctx.beginPath();
+      ctx.arc(24, 14, 3, 0, Math.PI*2);
+      ctx.fill();
+      // Glow
+      ctx.strokeStyle = '#ffee0066';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(24, 24, 20, 0, Math.PI*2);
+      ctx.stroke();
+    } else {
+      const pal = thm === 'hacker'
+        ? { skin:'#00ff41', hair:'#003300', shirt:'#003300', pants:'#001400' }
+        : { skin:'#f5c89a', hair:'#7a4020', shirt:'#5b7fa6', pants:'#3d2f1e' };
+      // @ts-ignore
+      const px = (x,y,c) => { ctx.fillStyle = pal[c]; ctx.fillRect(x*S, y*S, S, S); };
+      [
+        [5,3,'hair'],[6,3,'hair'],[7,3,'hair'],[8,3,'hair'],
+        [5,4,'skin'],[6,4,'skin'],[7,4,'skin'],[8,4,'skin'],
+        [5,5,'skin'],[6,5,'skin'],[7,5,'skin'],[8,5,'skin'],
+        [4,6,'shirt'],[5,6,'shirt'],[6,6,'shirt'],[7,6,'shirt'],[8,6,'shirt'],[9,6,'shirt'],
+        [4,7,'shirt'],[5,7,'shirt'],[6,7,'shirt'],[7,7,'shirt'],[8,7,'shirt'],[9,7,'shirt'],
+        [4,8,'shirt'],[5,8,'shirt'],[6,8,'shirt'],[7,8,'shirt'],[8,8,'shirt'],[9,8,'shirt'],
+        [5,9,'pants'],[6,9,'pants'],[7,9,'pants'],[8,9,'pants'],
+        [5,10,'pants'],[6,10,'pants'],[7,10,'pants'],[8,10,'pants'],
+        [4,11,'pants'],[5,11,'pants'],[7,11,'pants'],[8,11,'pants'],
+      ].forEach(([x,y,c]) => px(x,y,c));
+      if (thm === 'hacker') { ctx.fillStyle='#00ff41'; ctx.font='7px monospace'; ctx.fillText('> _', 2, 47); }
+    }
   }
+
   // @ts-ignore
   onMount(() => drawSprite(canvas, appState.theme));
   // @ts-ignore
   $effect(() => { drawSprite(canvas, appState.theme); });
 
-  // ── Daily quests — 3 per day, each from a different category ──
+  // Quests (same pool as before — abbreviated here, full in your Sidebar)
+// ── Daily quests — 3 per day, each from a different category ──
   // Quest pool: each entry belongs to one category.
   // Seeded by date so they're consistent within a day but rotate daily.
   const QUEST_POOL = [
@@ -130,91 +156,47 @@
     { cat:'Law',         icon:'⚖️', xp:80,  text:'Explore what "innocent until proven guilty" means procedurally, not just philosophically.' },
   ];
 
-  // Pick 3 quests from 3 different categories, seeded by today's date
   function getDailyQuests() {
     const today = new Date();
-    const seed  = today.getFullYear() * 10000 + (today.getMonth()+1) * 100 + today.getDate();
-
-    // Simple seeded pseudo-random
+    const seed  = today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
     // @ts-ignore
-    function seededRand(s) {
-      let x = Math.sin(s) * 10000;
-      return x - Math.floor(x);
+    const rnd   = (s) => { let x = Math.sin(s)*10000; return x - Math.floor(x); };
+    const cats  = [...new Set(QUEST_POOL.map(q=>q.cat))];
+    const chosen = [];
+    const rem = [...cats];
+    for (let i=0;i<3;i++){
+      const idx=Math.floor(rnd(seed+i*997)*rem.length);
+      chosen.push(rem.splice(idx,1)[0]);
     }
-
-    // Group quests by category
-    const byCategory = {};
-    QUEST_POOL.forEach(q => {
-      // @ts-ignore
-      if (!byCategory[q.cat]) byCategory[q.cat] = [];
-      // @ts-ignore
-      byCategory[q.cat].push(q);
-    });
-    const cats = Object.keys(byCategory);
-
-    // Pick 3 different categories
-    const chosenCats = [];
-    const catsCopy   = [...cats];
-    for (let i = 0; i < 3; i++) {
-      const idx = Math.floor(seededRand(seed + i * 997) * catsCopy.length);
-      chosenCats.push(catsCopy.splice(idx, 1)[0]);
-    }
-
-    // Pick one quest from each chosen category
-    return chosenCats.map((cat, i) => {
-      // @ts-ignore
-      const pool = byCategory[cat];
-      const idx  = Math.floor(seededRand(seed + i * 1337 + 42) * pool.length);
-      return pool[idx];
+    return chosen.map((cat,i)=>{
+      const pool=QUEST_POOL.filter(q=>q.cat===cat);
+      return pool[Math.floor(rnd(seed+i*1337+42)*pool.length)];
     });
   }
 
   let dailyQuests = getDailyQuests();
-
-  // ── Sync Daily Quests to global appState ──
-  $effect(() => {
-    dailyQuests.forEach(quest => {
-      // Check if this quest text is already a task in appState
-      // @ts-ignore
-      const exists = appState.tasks.some(t => t.title === quest.text);
-      if (!exists) {
-        // Create the task using your global createTask helper
-        // We set it to 1 chunk, easy difficulty, and tag it as a quest
-        createTask(quest.text, 'easy', ['quest']);
-      }
-    });
-  });
-
-  // Helper to check the current status of a daily quest from appState
-  // @ts-ignore
-  function getQuestStatus(questText) {
-    // @ts-ignore
-    const matchedTask = appState.tasks.find(t => t.title === questText);
-    if (!matchedTask) return { done: false, collected: false };
-    
-    return {
-      done: matchedTask.doneChunks >= matchedTask.chunks,
-      collected: matchedTask.collected
-    };
-  }
 </script>
 
 <aside class="sidebar">
 
-  <!-- Character card -->
   <div class="char-card">
     <canvas bind:this={canvas} class="sprite" width="48" height="48"></canvas>
     <div class="char-info">
-      <div class="char-name">{#if isHacker}<span class="dim">user@</span>{/if}{p.name}</div>
+      <div class="char-name">
+        {#if isHacker}<span class="dim">user@</span>
+        {:else if isRetro}<span class="dim">P1 · </span>
+        {/if}{p.name}
+      </div>
       <div class="char-class">{classTitle()}</div>
-      <span class="level-badge">LVL {p.level}</span>
+      <span class="level-badge">
+        {#if isRetro}STAGE {p.level}{:else}LVL {p.level}{/if}
+      </span>
     </div>
   </div>
 
-  <!-- XP bar -->
   <div class="stat-block">
     <div class="bar-label">
-      <span>{isHacker ? 'XP' : 'Experience'}</span>
+      <span>{isRetro ? 'SCORE' : isHacker ? 'XP' : 'Experience'}</span>
       <span class="mono">{xpInLevel}<span class="dim">/500</span></span>
     </div>
     <div class="bar-track"><div class="bar-fill xp" style="width:{xpPct}%"></div></div>
@@ -222,7 +204,7 @@
 
   <div class="bar-block">
     <div class="bar-label">
-      <span>{isHacker ? 'FOCUS' : 'Focus'}</span>
+      <span>{isRetro ? 'POWER' : isHacker ? 'FOCUS' : 'Focus'}</span>
       <span class="mono">{p.attributes.focus}</span>
     </div>
     <div class="bar-track">
@@ -232,32 +214,29 @@
 
   <div class="divider"></div>
 
-  <!-- Today stats -->
-  <div class="section-label">{isHacker ? '-- TODAY --' : 'Today'}</div>
+  <div class="section-label">
+    {isRetro ? '◄ TODAY ►' : isHacker ? '-- TODAY --' : 'Today'}
+  </div>
   <div class="stat-rows">
-    <div class="stat-row"><span>Tasks done</span><span class="val accent">{todayDone}</span></div>
-    <div class="stat-row"><span>Streak</span><span class="val">{isHacker ? '' : '🔥'} {p.streak}d</span></div>
-    <div class="stat-row"><span>Gold</span><span class="val gold">{isHacker ? '' : '💰'} {p.gold}</span></div>
-    <div class="stat-row"><span>To collect</span><span class="val accent2">{toCollect}</span></div>
+    <div class="stat-row"><span>{isRetro?'EATEN':'Tasks done'}</span><span class="val accent">{todayDone}</span></div>
+    <div class="stat-row"><span>{isRetro?'COMBO':'Streak'}</span><span class="val">×{p.streak}</span></div>
+    <div class="stat-row"><span>{isRetro?'COINS':'Gold'}</span><span class="val gold">🪙{p.gold}</span></div>
+    <div class="stat-row"><span>{isRetro?'BONUS':'To collect'}</span><span class="val accent2">{toCollect}</span></div>
   </div>
 
   <div class="divider"></div>
 
-  <!-- 3 Daily quests -->
-  <div class="section-label">{isHacker ? '-- DAILY QUESTS --' : 'Daily Quests'}</div>
+  <div class="section-label">
+    {isRetro ? '◄ SIDE QUESTS ►' : isHacker ? '-- DAILY QUESTS --' : 'Daily Quests'}
+  </div>
   <div class="quests-list">
     {#each dailyQuests as quest, i}
-      {@const status = getQuestStatus(quest.text)}
-      <div class="quest-card" class:completed={status.done} class:collected={status.collected}>
+      <div class="quest-card">
         <div class="quest-top">
-          <span class="quest-cat" style:text-decoration={status.done ? 'line-through' : 'none'}>
-            {isHacker ? quest.cat.toUpperCase() : quest.cat}
-          </span>
-          <span class="quest-xp">{status.done ? 'DONE' : `+${quest.xp}`}</span>
+          <span class="quest-cat-icon">{quest.icon}</span>
+          <span class="quest-cat">{isRetro ? `QUEST ${i+1}` : quest.cat.toUpperCase()}</span>
+          <span class="quest-xp">+{quest.xp}</span>
         </div>
-        {#if isHacker}
-          <span class="dim" style:color={status.done ? 'var(--accent)' : 'var(--text3)'} style="font-size:9px;font-family:var(--font-mono)">$ cat quest_{i+1}.md</span><br>
-        {/if}
         <span class="quest-text">{quest.text}</span>
       </div>
     {/each}
@@ -267,86 +246,87 @@
 
 <style>
 .sidebar {
-  width: var(--sidebar-w); min-width: var(--sidebar-w);
-  background: var(--bg2); border-right: 1px solid var(--border);
-  padding: 12px 11px; display: flex; flex-direction: column;
-  gap: 9px; overflow-y: auto; flex-shrink: 0;
+  width:var(--sidebar-w); min-width:var(--sidebar-w);
+  background:var(--bg2); border-right:1px solid var(--border);
+  padding:12px 11px; display:flex; flex-direction:column;
+  gap:9px; overflow-y:auto; flex-shrink:0;
+  transition:background .2s, border-color .2s;
 }
+:global([data-theme="retro"]) .sidebar { border-right:1px solid #3300aa; box-shadow:inset -4px 0 12px #3300aa22; }
 
 .char-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 10px;
-  display: flex; gap: 9px; align-items: flex-start;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-lg); padding:10px;
+  display:flex; gap:9px; align-items:flex-start;
 }
-.sprite {
-  image-rendering: pixelated; flex-shrink: 0;
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--bg3);
-}
-.char-info { flex: 1; min-width: 0; }
-.char-name {
-  font-size: 13px; font-weight: 600; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-:global([data-theme="hacker"]) .char-name { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
-.dim { color: var(--text3); }
-.char-class { font-size: 10px; color: var(--text3); font-family: var(--font-mono); margin: 2px 0 5px; }
-:global([data-theme="hacker"]) .char-class::before { content: '// '; }
+:global([data-theme="retro"]) .char-card { border-color:#3300aa; box-shadow:0 0 8px #3300aa44; }
+
+.sprite { image-rendering:pixelated; flex-shrink:0; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg3); }
+:global([data-theme="retro"]) .sprite { border-color:#ffee0055; background:#0a0010; }
+
+.char-info { flex:1; min-width:0; }
+.char-name { font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:global([data-theme="hacker"]) .char-name { font-family:var(--font-mono); font-size:11px; color:var(--accent); }
+:global([data-theme="retro"])  .char-name { font-family:var(--font-mono); font-size:11px; color:#ffee00; letter-spacing:1px; text-shadow:0 0 6px #ffee0066; }
+.dim { color:var(--text3); }
+
+.char-class { font-size:10px; color:var(--text3); font-family:var(--font-mono); margin:2px 0 5px; }
+:global([data-theme="hacker"]) .char-class::before { content:'// '; }
+:global([data-theme="retro"])  .char-class { color:#ff8800; letter-spacing:1px; }
+:global([data-theme="retro"])  .char-class::before { content:'▶ '; color:#ff4400; }
+
 .level-badge {
-  display: inline-block; background: var(--accent2); color: var(--bg);
-  font-size: 9px; font-weight: 700; padding: 2px 6px;
-  border-radius: var(--radius); font-family: var(--font-mono); letter-spacing: 0.5px;
+  display:inline-block; background:var(--accent2); color:var(--bg);
+  font-size:9px; font-weight:700; padding:2px 6px;
+  border-radius:var(--radius); font-family:var(--font-mono); letter-spacing:0.5px;
 }
+:global([data-theme="retro"]) .level-badge { background:#ff4400; color:#ffee00; box-shadow:0 0 6px #ff440088; letter-spacing:1.5px; }
 
-.stat-block, .bar-block { display: flex; flex-direction: column; gap: 3px; }
-.bar-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
-.mono { font-family: var(--font-mono); }
-.bar-track { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; border: 1px solid var(--border); }
-.bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
-.bar-fill.xp    { background: var(--xp-color); }
-.bar-fill.focus { background: var(--hp-color); }
+.stat-block, .bar-block { display:flex; flex-direction:column; gap:3px; }
+.bar-label { display:flex; justify-content:space-between; font-size:10px; color:var(--text3); font-family:var(--font-mono); }
+:global([data-theme="retro"]) .bar-label { color:#ff8800; letter-spacing:1px; }
+.mono { font-family:var(--font-mono); }
 
-.divider { height: 1px; background: var(--border); }
+.bar-track { height:5px; background:var(--bg3); border-radius:3px; overflow:hidden; border:1px solid var(--border); }
+:global([data-theme="retro"]) .bar-track { border-radius:0; border-color:#3300aa; height:7px; }
+.bar-fill { height:100%; border-radius:3px; transition:width 0.5s ease; }
+.bar-fill.xp    { background:var(--xp-color); }
+.bar-fill.focus { background:var(--hp-color); }
+:global([data-theme="retro"]) .bar-fill.xp    { background:#ffee00; box-shadow:0 0 4px #ffee0088; border-radius:0; }
+:global([data-theme="retro"]) .bar-fill.focus { background:#00ccff; box-shadow:0 0 4px #00ccff88; border-radius:0; }
 
-.section-label { font-size: 10px; font-family: var(--font-mono); color: var(--text3); letter-spacing: 0.5px; }
+.divider { height:1px; background:var(--border); }
+:global([data-theme="retro"]) .divider { background:#3300aa; box-shadow:0 0 4px #3300aa88; }
 
-.stat-rows { display: flex; flex-direction: column; gap: 4px; }
-.stat-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); }
-:global([data-theme="hacker"]) .stat-row { font-family: var(--font-mono); font-size: 10px; }
-.val { font-family: var(--font-mono); font-weight: 600; }
-.val.accent  { color: var(--accent); }
-.val.accent2 { color: var(--accent2); }
-.val.gold    { color: var(--gold-color); }
+.section-label { font-size:10px; font-family:var(--font-mono); color:var(--text3); letter-spacing:0.5px; }
+:global([data-theme="retro"]) .section-label { color:#ff4400; letter-spacing:2px; text-shadow:0 0 4px #ff440066; }
 
-/* Daily quests */
-.quests-list { display: flex; flex-direction: column; gap: 6px; }
+.stat-rows { display:flex; flex-direction:column; gap:4px; }
+.stat-row { display:flex; justify-content:space-between; font-size:11px; color:var(--text2); }
+:global([data-theme="hacker"]) .stat-row { font-family:var(--font-mono); font-size:10px; }
+:global([data-theme="retro"])  .stat-row { font-family:var(--font-mono); font-size:10px; letter-spacing:1px; }
+.val { font-family:var(--font-mono); font-weight:600; }
+.val.accent  { color:var(--accent); }
+.val.accent2 { color:var(--accent2); }
+.val.gold    { color:var(--gold-color); }
+:global([data-theme="retro"]) .val.accent  { color:#ffee00; text-shadow:0 0 4px #ffee0066; }
+:global([data-theme="retro"]) .val.accent2 { color:#ff4400; text-shadow:0 0 4px #ff440066; }
+:global([data-theme="retro"]) .val.gold    { color:#ffbb00; }
+
+.quests-list { display:flex; flex-direction:column; gap:6px; }
 .quest-card {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 7px 8px;
-  font-size: 10px; line-height: 1.5;
-  transition: border-color .15s;
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--radius); padding:7px 8px;
+  font-size:10px; line-height:1.5; transition:border-color .15s;
 }
-.quest-card:hover { border-color: var(--border2); }
-.quest-top { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
-.quest-cat-icon { font-size: 12px; }
-.quest-cat { font-size: 9px; font-family: var(--font-mono); color: var(--accent2); flex: 1; letter-spacing: 0.5px; }
-.quest-xp  { font-size: 9px; font-family: var(--font-mono); color: var(--accent); }
-.quest-text { color: var(--text2); display: block; font-size: 10px; line-height: 1.5; }
-
-/* Quest Completion Colors */
-.quest-card.completed {
-  border-color: var(--accent);
-  background: rgba(0, 255, 65, 0.05); /* Soft glowing green hint */
-}
-.quest-card.completed .quest-text {
-  color: var(--text3);
-  opacity: 0.7;
-}
-
-.quest-card.collected {
-  border-color: var(--border);
-  background: var(--bg2);
-  opacity: 0.4;
-}
-:global([data-theme="hacker"]) .quest-text { font-family: var(--font-mono); color: var(--text3); font-size: 9px; }
+:global([data-theme="retro"]) .quest-card { border-color:#3300aa; background:#0a0010; }
+:global([data-theme="retro"]) .quest-card:hover { border-color:#ffee00; box-shadow:0 0 6px #ffee0033; }
+.quest-top { display:flex; align-items:center; gap:4px; margin-bottom:3px; }
+.quest-cat-icon { font-size:12px; }
+.quest-cat { font-size:9px; font-family:var(--font-mono); color:var(--accent2); flex:1; letter-spacing:0.5px; }
+:global([data-theme="retro"]) .quest-cat { color:#ff4400; letter-spacing:1px; }
+.quest-xp  { font-size:9px; font-family:var(--font-mono); color:var(--accent); }
+:global([data-theme="retro"]) .quest-xp  { color:#ffee00; text-shadow:0 0 3px #ffee0066; }
+.quest-text { color:var(--text2); display:block; font-size:10px; line-height:1.5; }
+:global([data-theme="retro"]) .quest-text { font-family:var(--font-mono); color:#aa5500; font-size:9px; }
 </style>

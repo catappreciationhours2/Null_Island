@@ -1,6 +1,5 @@
 // src/lib/stores/appState.svelte.js
 // Svelte 5 runes — single source of truth.
-// Full persistence via localStorage (migrates to Turso in Phase 4).
 
 // ─────────────────────────────────────────
 // PERSISTENCE HELPERS
@@ -54,27 +53,23 @@ const DEFAULT_MONTHLY = [
 ];
 
 const SHOP_DEFAULT_ITEMS = [
-  { id: 's1',  label: 'Oak Staff',         icon: '🪄', rarity: 'common',    type: 'weapon',    price: 60,   desc: 'A sturdy staff carved from ancient oak.' },
-  { id: 's2',  label: 'Moonstone Ring',    icon: '💍', rarity: 'rare',      type: 'accessory', price: 120,  desc: 'Glows faintly under moonlight.' },
-  { id: 's3',  label: 'Leather Cloak',     icon: '🧥', rarity: 'common',    type: 'clothing',  price: 80,   desc: 'Worn but reliable. Keeps the chill out.' },
-  { id: 's4',  label: 'Scholar\'s Tome',   icon: '📚', rarity: 'rare',      type: 'accessory', price: 150,  desc: '+5 Learning on equip.' },
-  { id: 's5',  label: 'Iron Shield',       icon: '🛡️', rarity: 'common',    type: 'weapon',    price: 90,   desc: 'Solid protection. Dented but dependable.' },
-  { id: 's6',  label: 'Witch Hat',         icon: '🎩', rarity: 'epic',      type: 'clothing',  price: 200,  desc: 'Adds an air of mystery to any outfit.' },
-  { id: 's7',  label: 'Golden Compass',    icon: '🧭', rarity: 'rare',      type: 'accessory', price: 175,  desc: 'Always points toward your goals.' },
-  { id: 's8',  label: 'Flame Gauntlet',    icon: '🧤', rarity: 'epic',      type: 'clothing',  price: 220,  desc: 'Heat resistant. Looks incredible.' },
-  { id: 's9',  label: 'Philosopher\'s Eye',icon: '🔮', rarity: 'legendary', type: 'accessory', price: 500,  desc: 'Reveals hidden patterns in everything.' },
-  { id: 's10', label: 'Forest Boots',      icon: '👢', rarity: 'common',    type: 'clothing',  price: 70,   desc: 'Silent on any terrain.' },
-  { id: 's11', label: 'Storm Amulet',      icon: '⚡', rarity: 'rare',      type: 'accessory', price: 140,  desc: 'Crackles with stored energy.' },
-  { id: 's12', label: 'Shadow Dagger',     icon: '🔪', rarity: 'epic',      type: 'weapon',    price: 280,  desc: 'Leaves no trace. Hacker-exclusive lore.' },
+  { id: 's1',  label: 'Oak Staff',          icon: '🪄', rarity: 'common',    type: 'weapon',    price: 60,  desc: 'A sturdy staff carved from ancient oak.' },
+  { id: 's2',  label: 'Moonstone Ring',     icon: '💍', rarity: 'rare',      type: 'accessory', price: 120, desc: 'Glows faintly under moonlight.' },
+  { id: 's3',  label: 'Leather Cloak',      icon: '🧥', rarity: 'common',    type: 'clothing',  price: 80,  desc: 'Worn but reliable. Keeps the chill out.' },
+  { id: 's4',  label: "Scholar's Tome",     icon: '📚', rarity: 'rare',      type: 'accessory', price: 150, desc: '+5 Learning on equip.' },
+  { id: 's5',  label: 'Iron Shield',        icon: '🛡️', rarity: 'common',    type: 'weapon',    price: 90,  desc: 'Solid protection. Dented but dependable.' },
+  { id: 's6',  label: 'Witch Hat',          icon: '🎩', rarity: 'epic',      type: 'clothing',  price: 200, desc: 'Adds an air of mystery to any outfit.' },
+  { id: 's7',  label: 'Golden Compass',     icon: '🧭', rarity: 'rare',      type: 'accessory', price: 175, desc: 'Always points toward your goals.' },
+  { id: 's8',  label: 'Flame Gauntlet',     icon: '🧤', rarity: 'epic',      type: 'clothing',  price: 220, desc: 'Heat resistant. Looks incredible.' },
+  { id: 's9',  label: "Philosopher's Eye",  icon: '🔮', rarity: 'legendary', type: 'accessory', price: 500, desc: 'Reveals hidden patterns in everything.' },
+  { id: 's10', label: 'Forest Boots',       icon: '👢', rarity: 'common',    type: 'clothing',  price: 70,  desc: 'Silent on any terrain.' },
+  { id: 's11', label: 'Storm Amulet',       icon: '⚡', rarity: 'rare',      type: 'accessory', price: 140, desc: 'Crackles with stored energy.' },
+  { id: 's12', label: 'Shadow Dagger',      icon: '🔪', rarity: 'epic',      type: 'weapon',    price: 280, desc: 'Leaves no trace. Hacker-exclusive lore.' },
 ];
 
-const NPC_CRAFTSMEN = [
+export const NPC_CRAFTSMEN = [
   {
-    id: 'tailor',
-    name: 'Mireille',
-    title: 'The Tailor',
-    icon: '🧵',
-    cost: 50,
+    id: 'tailor', name: 'Mireille', title: 'The Tailor', icon: '🧵', cost: 50,
     desc: 'Crafts custom clothing & cloaks',
     personality: 'refined, slightly dramatic, uses fashion metaphors',
     greetings: [
@@ -94,11 +89,7 @@ const NPC_CRAFTSMEN = [
     itemType: 'clothing',
   },
   {
-    id: 'blacksmith',
-    name: 'Rork',
-    title: 'The Blacksmith',
-    icon: '⚒️',
-    cost: 75,
+    id: 'blacksmith', name: 'Rork', title: 'The Blacksmith', icon: '⚒️', cost: 75,
     desc: 'Forges custom weapons & tools',
     personality: 'gruff, honest, secretly sentimental, hates small talk',
     greetings: [
@@ -118,11 +109,7 @@ const NPC_CRAFTSMEN = [
     itemType: 'weapon',
   },
   {
-    id: 'artisan',
-    name: 'Pip',
-    title: 'The Artisan',
-    icon: '🎨',
-    cost: 60,
+    id: 'artisan', name: 'Pip', title: 'The Artisan', icon: '🎨', cost: 60,
     desc: 'Creates accessories & art pieces',
     personality: 'chaotic enthusiastic, talks too fast, always paint-stained',
     greetings: [
@@ -142,11 +129,7 @@ const NPC_CRAFTSMEN = [
     itemType: 'accessory',
   },
   {
-    id: 'collector',
-    name: 'Vesper',
-    title: 'The Antique Collector',
-    icon: '🏺',
-    cost: 100,
+    id: 'collector', name: 'Vesper', title: 'The Antique Collector', icon: '🏺', cost: 100,
     desc: 'Provides rare relics & curiosities',
     personality: 'mysterious, speaks in half-riddles, knows too much',
     greetings: [
@@ -176,15 +159,125 @@ const DIFF_CHUNKS  = { easy: 2,  med: 3,  hard: 5  };
 
 // @ts-ignore
 export function calcReward(task) {
-  const chunkMins  = task.chunkMins || 17.5;
-  const timeScale  = Math.sqrt(chunkMins / 17.5); // longer chunks = more XP
+  const chunkMins = task.chunkMins || 17.5;
+  const timeScale = Math.sqrt(chunkMins / 17.5);
   // @ts-ignore
-  const diffMult   = { easy: 1, med: 1.4, hard: 2 }[task.difficulty] || 1;
+  const diffMult  = { easy: 1, med: 1.4, hard: 2 }[task.difficulty] || 1;
   // @ts-ignore
-  const baseXP     = DIFF_BASE_XP[task.difficulty] || 40;
-  const xp         = Math.round(baseXP * diffMult * timeScale);
-  const gold       = Math.floor(xp * 0.8);
+  const baseXP    = DIFF_BASE_XP[task.difficulty] || 40;
+  const xp        = Math.round(baseXP * diffMult * timeScale);
+  const gold      = Math.floor(xp * 0.8);
   return { xp, gold };
+}
+
+// ─────────────────────────────────────────
+// BLOOM HELPERS  (exported so MapView can import them)
+// ─────────────────────────────────────────
+export const PALETTE_COTTAGE = [
+  '#f4a8c7', '#a8c4f4', '#a8f4c4', '#f4e4a8', '#c4a8f4', '#a8f0f4', '#f4c4a8',
+];
+export const PALETTE_RETRO = [
+  '#ff004d', '#ffa300', '#00e436', '#29adff', '#ff77a8', '#ffccaa', '#83769c',
+];
+export const BLOOM_RADIUS = { easy: 5, med: 9, hard: 15 };
+const MAP_COLS = 120;
+const MAP_ROWS = 60;
+
+// @ts-ignore
+export function buildBloomCells(col, row, difficulty) {
+  // @ts-ignore
+  const radius = BLOOM_RADIUS[difficulty] ?? BLOOM_RADIUS.med;
+  const cells   = [];
+  const visited = new Set();
+  // @ts-ignore
+  const key     = (c, r) => `${c},${r}`;
+  const queue   = [{ c: col, r: row, depth: 0 }];
+  visited.add(key(col, row));
+  while (queue.length) {
+    // @ts-ignore
+    const { c, r, depth } = queue.shift();
+    if (c < 0 || c >= MAP_COLS || r < 0 || r >= MAP_ROWS) continue;
+    cells.push({ c, r });
+    if (depth >= radius) continue;
+    for (const [dc, dr] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]]) {
+      const nc = c + dc, nr = r + dr, nk = key(nc, nr);
+      if (!visited.has(nk) && Math.random() < 0.65 - depth * 0.04) {
+        visited.add(nk);
+        queue.push({ c: nc, r: nr, depth: depth + 1 });
+      }
+    }
+  }
+  return cells;
+}
+
+// Ephemeral palette rotation counter (doesn't need persistence — just variety)
+const bloomColorIdx = {};
+
+// addBloom: called from collectTask so it fires regardless of which view is active.
+// Pushes individual painted-cell records into appState.blooms.
+// @ts-ignore
+export function addBloom(taskId, difficulty) {
+  const pos = appState.taskPositions[taskId];
+  if (!pos) return;
+ 
+  const cells = buildBloomCells(pos.col, pos.row, difficulty);
+ 
+  // Pick colour indices for cottage and retro independently
+  // @ts-ignore
+  const cIdx = bloomColorIdx[`${taskId}_c`] ?? Math.floor(Math.random() * PALETTE_COTTAGE.length);
+  // @ts-ignore
+  const rIdx = bloomColorIdx[`${taskId}_r`] ?? Math.floor(Math.random() * PALETTE_RETRO.length);
+  // @ts-ignore
+  bloomColorIdx[`${taskId}_c`] = (cIdx + 1) % PALETTE_COTTAGE.length;
+  // @ts-ignore
+  bloomColorIdx[`${taskId}_r`] = (rIdx + 1) % PALETTE_RETRO.length;
+ 
+  cells.forEach(({ c, r }) => {
+    // ── hacker_bit: XOR with the most recent hacker_bit at this cell ──────
+    const prevHacker = [...appState.blooms].reverse().find(
+      b => b.col === c && b.row === r
+    );
+
+    const randomBit = Math.random() < 0.5 ? 0 : 1;
+ 
+    // ── cottage: if cell already painted, pick a shifted colour ───────────
+    // @ts-ignore
+    const hasExistingCottage = appState.blooms.some(b => b.col === c && b.row === r);
+    const cottagePick = hasExistingCottage
+      ? PALETTE_COTTAGE[(cIdx + 1) % PALETTE_COTTAGE.length]
+      : PALETTE_COTTAGE[cIdx % PALETTE_COTTAGE.length];
+ 
+    // ── retro: same logic with retro palette ──────────────────────────────
+    const retroPick = hasExistingCottage
+      ? PALETTE_RETRO[(rIdx + 1) % PALETTE_RETRO.length]
+      : PALETTE_RETRO[rIdx % PALETTE_RETRO.length];
+ 
+    appState.blooms.push({
+      col:           c,
+      row:           r,
+      cottage_color: cottagePick,
+      retro_color:   retroPick,
+      hacker_bit: prevHacker ? ((prevHacker.hacker_bit ?? 0) ^ randomBit): randomBit,
+    });
+  });
+}
+
+// Assign a stable map position for a task (idempotent)
+// @ts-ignore
+function ensureTaskPosition(taskId) {
+  if (appState.taskPositions[taskId]) return;
+  const margin = 6;
+  const taken  = Object.values(appState.taskPositions);
+  // @ts-ignore
+  let col, row, tries = 0;
+  do {
+    col = margin + Math.floor(Math.random() * (MAP_COLS - margin * 2));
+    row = margin + Math.floor(Math.random() * (MAP_ROWS - margin * 2));
+    // @ts-ignore
+    const clash = taken.some(p => Math.abs(p.col - col) < 10 && Math.abs(p.row - row) < 6);
+    if (!clash) break;
+  } while (++tries < 300);
+  appState.taskPositions[taskId] = { col, row };
 }
 
 // ─────────────────────────────────────────
@@ -194,47 +287,52 @@ export const appState = $state({
   theme:     load('hw-theme', 'cottage'),
   activeTab: 'tasks',
 
-  player:       load('hw-player',    DEFAULT_PLAYER),
-  tasks:        load('hw-tasks',     []),
-  taskHistory:  load('hw-history',   []),
-  awards:       load('hw-awards',    DEFAULT_AWARDS),
-  monthlyAwards:load('hw-monthly',   DEFAULT_MONTHLY),
-  inventory:    load('hw-inventory', DEFAULT_INVENTORY),
-  shopItems:    SHOP_DEFAULT_ITEMS,
+  player:        load('hw-player',    DEFAULT_PLAYER),
+  tasks:         load('hw-tasks',     []),
+  taskHistory:   load('hw-history',   []),
+  awards:        load('hw-awards',    DEFAULT_AWARDS),
+  monthlyAwards: load('hw-monthly',   DEFAULT_MONTHLY),
+  inventory:     load('hw-inventory', DEFAULT_INVENTORY),
+  shopItems:     SHOP_DEFAULT_ITEMS,
+
+  // ── Map persistence ──────────────────────────────────────────────────────
+  // blooms: flat list of painted pixel records; MapView replays these on mount.
+  // Each record: { col, row, theme, color? (cottage/retro), bit? (hacker) }
+  blooms:        load('hw-blooms',    []),
+  // taskPositions: stable col/row for every task, persisted so they don't jump around.
+  taskPositions: load('hw-task-pos',  {}),
 
   notifications: [],
   _notifId: 0,
 
-  // Shop state
   shopTab: 'browse',
   activeCraftsman: null,
   craftConversation: [],
 
-  // Profile sub-tab
   profileTab: 'overview',
-
-  // Map snapshots — array of { id, dataUrl, label, savedAt }
-  mapSnapshots: load('hw-map-snapshots', []),
 });
 
 // ─────────────────────────────────────────
-// AUTO-PERSIST on every mutation
+// AUTO-PERSIST
 // ─────────────────────────────────────────
 $effect.root(() => {
-  $effect(() => { save('hw-player',    JSON.parse(JSON.stringify(appState.player))); });
-  $effect(() => { save('hw-tasks',     JSON.parse(JSON.stringify(appState.tasks))); });
-  $effect(() => { save('hw-history',   JSON.parse(JSON.stringify(appState.taskHistory))); });
-  $effect(() => { save('hw-awards',    JSON.parse(JSON.stringify(appState.awards))); });
-  $effect(() => { save('hw-monthly',   JSON.parse(JSON.stringify(appState.monthlyAwards))); });
-  $effect(() => { save('hw-inventory', JSON.parse(JSON.stringify(appState.inventory))); });
+  $effect(() => { save('hw-player',    appState.player); });
+  $effect(() => { save('hw-tasks',     appState.tasks); });
+  $effect(() => { save('hw-history',   appState.taskHistory); });
+  $effect(() => { save('hw-awards',    appState.awards); });
+  $effect(() => { save('hw-monthly',   appState.monthlyAwards); });
   $effect(() => { save('hw-theme',     appState.theme); });
+  $effect(() => { save('hw-blooms',    appState.blooms); });
+  $effect(() => { save('hw-task-pos',  appState.taskPositions); });
 });
 
 // ─────────────────────────────────────────
 // THEME
 // ─────────────────────────────────────────
 export function toggleTheme() {
-  const next = appState.theme === 'cottage' ? 'hacker' : 'cottage';
+  const next = appState.theme === 'cottage' ? 'hacker'
+             : appState.theme === 'hacker'  ? 'retro'
+             : 'cottage';
   appState.theme = next;
   if (typeof document !== 'undefined') document.documentElement.dataset.theme = next;
 }
@@ -266,12 +364,18 @@ export function notify(message, type = 'info') {
 // @ts-ignore
 export function createTask(title, difficulty = 'med', tags = [], customChunks = null, chunkMins = null) {
   // @ts-ignore
-  const chunks    = customChunks ?? (DIFF_CHUNKS[difficulty] || 3);
-  const mins      = chunkMins ?? 17.5;
+  const chunks = customChunks ?? (DIFF_CHUNKS[difficulty] || 3);
+  const mins   = chunkMins ?? 17.5;
   const { xp, gold } = calcReward({ difficulty, chunks, chunkMins: mins });
 
+  const id = crypto.randomUUID();
+
+  // Assign map position now and persist it
+  ensureTaskPosition(id);
+  const { col, row } = appState.taskPositions[id];
+
   const task = {
-    id:          crypto.randomUUID(),
+    id,
     title,
     difficulty,
     chunks,
@@ -282,8 +386,8 @@ export function createTask(title, difficulty = 'med', tags = [], customChunks = 
     createdAt:   Date.now(),
     completedAt: null,
     collectedAt: null,
-    mapX:        8 + Math.random() * 82,
-    mapY:        8 + Math.random() * 78,
+    mapX:        col / MAP_COLS,  // kept for legacy compatibility
+    mapY:        row / MAP_ROWS,
     rewardXP:    xp,
     rewardGold:  gold,
   };
@@ -339,13 +443,11 @@ export function collectTask(taskId) {
   task.collected   = true;
   task.collectedAt = Date.now();
 
-  // Award XP + gold
   appState.player.xp        += task.rewardXP;
   appState.player.gold      += task.rewardGold;
   appState.player.totalDone += 1;
 
-  // Level up check
-  const newLevel = Math.floor(appState.player.xp / XP_PER_LEVEL) + 1;
+  const newLevel  = Math.floor(appState.player.xp / XP_PER_LEVEL) + 1;
   const leveledUp = newLevel > appState.player.level;
   if (leveledUp) {
     appState.player.level = newLevel;
@@ -354,22 +456,21 @@ export function collectTask(taskId) {
       : `✨ Level up! You're now Level ${newLevel}!`, 'success');
   }
 
-  // Attribute gains
   const attrs = appState.player.attributes;
   attrs.consistency += 1;
   attrs.focus       += task.difficulty === 'hard' ? 2 : 1;
   attrs.endurance   += task.difficulty === 'hard' ? 3 : task.difficulty === 'med' ? 1 : 0;
-  if (task.tags?.includes('creative'))  attrs.creativity += 3;
-  if (task.tags?.includes('learning'))  attrs.learning   += 3;
+  if (task.tags?.includes('creative')) attrs.creativity += 3;
+  if (task.tags?.includes('learning')) attrs.learning   += 3;
 
-  // Update streak
   updateStreak();
-
-  // Archive to history
   appState.taskHistory.unshift({ ...task });
 
-  // Remove from active list after adding to history
-  // (task card disappears from tasks view 24h after collect — handled in view)
+  // ── Paint bloom for this completed task ─────────────────────────────────
+  // Ensure position exists (should always be set by createTask, but guard anyway)
+  ensureTaskPosition(task.id);
+  // @ts-ignore
+  addBloom(task.id, task.difficulty, appState.theme);
 
   notify(
     appState.theme === 'hacker'
@@ -382,12 +483,9 @@ export function collectTask(taskId) {
 }
 
 function updateStreak() {
-  const today = new Date().toDateString();
-  const last  = appState.player.lastActive
-    ? new Date(appState.player.lastActive).toDateString()
-    : null;
+  const today     = new Date().toDateString();
+  const last      = appState.player.lastActive ? new Date(appState.player.lastActive).toDateString() : null;
   const yesterday = new Date(Date.now() - 86400000).toDateString();
-
   if (last === today) {
     // already active today
   } else if (last === yesterday) {
@@ -402,17 +500,12 @@ function updateStreak() {
 // ACHIEVEMENTS
 // ─────────────────────────────────────────
 const ACHIEVEMENT_RULES = [
-  { id: 'first_task',  label: 'First Flame',   icon: '🔥', type: 'normal',
-    check: () => appState.player.totalDone >= 1 },
-  { id: 'ten_tasks',   label: 'Decade',         icon: '🌟', type: 'normal',
-    check: () => appState.player.totalDone >= 10 },
-  { id: 'streak_7',    label: '7-Day Ember',    icon: '💎', type: 'special',
-    check: () => appState.player.streak >= 7 },
-  { id: 'streak_30',   label: 'Eternal Flame',  icon: '🌋', type: 'special',
-    check: () => appState.player.streak >= 30 },
-  { id: 'level_5',     label: 'Apprentice+',    icon: '📈', type: 'normal',
-    check: () => appState.player.level >= 5 },
-  { id: 'hard_5',      label: 'Iron Will',      icon: '⚔️', type: 'normal',
+  { id: 'first_task', label: 'First Flame',  icon: '🔥', type: 'normal',  check: () => appState.player.totalDone >= 1 },
+  { id: 'ten_tasks',  label: 'Decade',       icon: '🌟', type: 'normal',  check: () => appState.player.totalDone >= 10 },
+  { id: 'streak_7',   label: '7-Day Ember',  icon: '💎', type: 'special', check: () => appState.player.streak >= 7 },
+  { id: 'streak_30',  label: 'Eternal Flame',icon: '🌋', type: 'special', check: () => appState.player.streak >= 30 },
+  { id: 'level_5',    label: 'Apprentice+',  icon: '📈', type: 'normal',  check: () => appState.player.level >= 5 },
+  { id: 'hard_5',     label: 'Iron Will',    icon: '⚔️', type: 'normal',
     // @ts-ignore
     check: () => appState.taskHistory.filter(t => t.difficulty === 'hard').length >= 5 },
 ];
@@ -442,9 +535,6 @@ export function toggleEquip(itemId) {
   const item = appState.inventory.find(i => i.id === itemId);
   if (!item) return;
   item.equipped = !item.equipped;
-  if (!item.equipped) {
-    // keep equip transform state when un-equipping so it restores on re-equip
-  }
   notify(
     appState.theme === 'hacker'
       ? `> ITEM ${item.equipped ? 'EQUIPPED' : 'UNEQUIPPED'}: ${item.label}`
@@ -482,12 +572,7 @@ export function buyItem(shopItemId) {
     return;
   }
   appState.player.gold -= item.price;
-  appState.inventory.push({
-    ...item,
-    id:       crypto.randomUUID(),
-    equipped: false,
-    equip:    null,
-  });
+  appState.inventory.push({ ...item, id: crypto.randomUUID(), equipped: false, equip: null });
   notify(
     appState.theme === 'hacker'
       ? `> PURCHASED: ${item.label} (-${item.price}G)`
@@ -496,12 +581,10 @@ export function buyItem(shopItemId) {
   );
 }
 
-// visitCraftsman opens the chat for free — gold charged only on commission
 // @ts-ignore
 export function visitCraftsman(craftsmanId) {
   const npc = NPC_CRAFTSMEN.find(n => n.id === craftsmanId);
   if (!npc) return false;
-  // No gold deduction here — charged in ShopView when commission is submitted
   // @ts-ignore
   appState.activeCraftsman = npc;
   appState.shopTab = 'craft';
@@ -511,17 +594,15 @@ export function visitCraftsman(craftsmanId) {
   return true;
 }
 
-// imageDataUrl is a base64 PNG already resized to 48x48 by ShopView
 // @ts-ignore
 export function submitCustomItem(itemLabel, imageDataUrl, itemDesc) {
   const npc = appState.activeCraftsman;
   if (!npc) return;
-
   const newItem = {
     id:        crypto.randomUUID(),
     label:     itemLabel,
-    icon:      imageDataUrl,  // base64 PNG dataUrl
-    isImage:   true,          // flag so inventory renders <img> not emoji
+    icon:      imageDataUrl,
+    isImage:   true,
     rarity:    'epic',
     // @ts-ignore
     type:      npc.itemType,
@@ -533,13 +614,11 @@ export function submitCustomItem(itemLabel, imageDataUrl, itemDesc) {
     // @ts-ignore
     craftedBy: npc.name,
   };
-
   appState.inventory.push(newItem);
   // @ts-ignore
   const reaction = npc.reactions[Math.floor(Math.random() * npc.reactions.length)];
   // @ts-ignore
   appState.craftConversation.push({ role: 'npc', text: reaction });
-
   notify(
     appState.theme === 'hacker'
       ? `> ITEM CRAFTED: ${itemLabel} added to inventory`
@@ -548,5 +627,3 @@ export function submitCustomItem(itemLabel, imageDataUrl, itemDesc) {
     'success'
   );
 }
-
-export { NPC_CRAFTSMEN };
