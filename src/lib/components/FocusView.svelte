@@ -1,6 +1,8 @@
 <script>
-  import { appState, notify, setTab } from '$lib/stores/appState.svelte.js';
-  import { onDestroy } from 'svelte';
+  import { appState, notify, setTab, addFocusUse } from '$lib/stores/appState.svelte.js';
+  import { onDestroy, onMount } from 'svelte';
+
+  let { visible = true } = $props();
 
   // ── Theme helpers ──────────────────────────────────────────────────────
   let theme    = $derived(appState.theme);
@@ -28,21 +30,32 @@
   let swInterval  = null;
 
   // ── Time stats (session + persistent total) ────────────────────────────
-  let sessionMs = $state(0);     // total ms worked this session
-  let totalMs   = $state(() => {
-    if (typeof localStorage === 'undefined') return 0;
-    return parseInt(localStorage.getItem('hw-total-time') || '0');
+  let sessionMs     = $state(0);   // ms worked this session
+  let totalMs       = $state(0);   // ms worked all time (loaded from localStorage in onMount)
+  let focusSessions = $state(0);   // total sessions all time
+
+  onMount(() => {
+    const rawTime     = parseInt(localStorage.getItem('hw-total-time')     ?? '0');
+    const rawSessions = parseInt(localStorage.getItem('hw-focus-sessions') ?? '0');
+    // Guard against NaN left by old broken code
+    totalMs       = isNaN(rawTime)     ? 0 : rawTime;
+    focusSessions = isNaN(rawSessions) ? 0 : rawSessions;
+    // Repair corrupted values in storage
+    if (isNaN(rawTime))     localStorage.setItem('hw-total-time',     '0');
+    if (isNaN(rawSessions)) localStorage.setItem('hw-focus-sessions', '0');
   });
 
   function addToTotal(ms) {
-    totalMs += ms;
-    sessionMs += ms;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hw-total-time', String(totalMs));
-    }
-    // Also update appState player stats if it exists
+    totalMs       += ms;
+    sessionMs     += ms;
+    focusSessions += 1;
+    localStorage.setItem('hw-total-time',     String(totalMs));
+    localStorage.setItem('hw-focus-sessions', String(focusSessions));
     if (appState?.player) {
-      appState.player.totalWorkMs = (appState.player.totalWorkMs || 0) + ms;
+      // totalTime is stored in minutes (matches rest of app + profile display)
+      appState.player.totalTime = (appState.player.totalTime || 0) + ms / 60000;
+      // addFocusUse increments focusUses AND updates attributes.focus (session count)
+      addFocusUse();
     }
   }
 
@@ -203,7 +216,7 @@
   }));
 </script>
 
-<div class="focus-shell theme-{theme}">
+<div class="focus-shell theme-{theme}" style="display:{visible ? 'flex' : 'none'}" aria-hidden={!visible}>
 
   <!-- Floating background particles -->
   <div class="particles" aria-hidden="true">
@@ -426,6 +439,11 @@
       <div class="stat-item">
         <div class="stat-val">{fmtMsLong(totalMs)}</div>
         <div class="stat-lbl">{isCottage ? 'Total logged' : isHacker ? 'TOTAL_TIME' : 'ALL TIME'}</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <div class="stat-val">{focusSessions}</div>
+        <div class="stat-lbl">{isCottage ? 'Sessions' : isHacker ? 'SESSIONS' : 'SESSIONS'}</div>
       </div>
     </div>
 

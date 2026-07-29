@@ -2,6 +2,17 @@
 // Svelte 5 runes — single source of truth.
 
 // ─────────────────────────────────────────
+// DATA IMPORTS  (edit the files in src/lib/data/ to change game content)
+// ─────────────────────────────────────────
+import { LEARNING_TAGS as _LEARNING_TAGS, CREATIVE_TAGS as _CREATIVE_TAGS } from '$lib/data/tags.js';
+import { MONTHLY_CARD_DATA as _MONTHLY_CARD_DATA } from '$lib/data/monthlyCards.js';
+import { SHOP_DEFAULT_ITEMS as _SHOP_DEFAULT_ITEMS } from '$lib/data/shopItems.js';
+import { NPC_CRAFTSMEN as _NPC_CRAFTSMEN } from '$lib/data/craftsmen.js';
+import { ACHIEVEMENT_RULES as _ACHIEVEMENT_RULES } from '$lib/data/achievementRules.js';
+import { DEFAULT_INVENTORY as _DEFAULT_INVENTORY } from '$lib/data/defaultInventory.js';
+import { DEFAULT_AWARDS as _DEFAULT_AWARDS } from '$lib/data/defaultAwards.js';
+
+// ─────────────────────────────────────────
 // PERSISTENCE HELPERS
 // ─────────────────────────────────────────
 // @ts-ignore
@@ -17,50 +28,24 @@ function load(key, fallback) {
 function save(key, val) {
   if (typeof localStorage === 'undefined') return;
   try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  _syncHook();
 }
 
-// ─────────────────────────────────────────
-// TAG CATEGORIES
-// ─────────────────────────────────────────
-export const LEARNING_TAGS = ['law', 'technology', 'biology', 'physics', 'engineering', 'space', 'science'];
-export const CREATIVE_TAGS  = ['art', 'history', 'make', 'literature'];
+// Sync hook — set by the layout once sync.js is initialised
+// (avoids circular import between appState ↔ sync)
+let _syncHook = () => {};
+export function setSyncHook(fn) { _syncHook = fn; }
 
 // ─────────────────────────────────────────
-// MONTHLY CARD DATA  (Jun 2025 → Dec 2027)
+// TAG CATEGORIES  (edit src/lib/data/tags.js)
 // ─────────────────────────────────────────
-export const MONTHLY_CARD_DATA = {
-  '2025-06': { label: 'Jun: Solstice',  icon: '☀️',  desc: 'June 2025 · the beginning' },
-  '2025-07': { label: 'Jul: Tide',      icon: '🌊',  desc: 'July 2025 · flow with the current' },
-  '2025-08': { label: 'Aug: Ember',     icon: '🔥',  desc: 'August 2025 · burn steady' },
-  '2025-09': { label: 'Sep: Harvest',   icon: '🍂',  desc: 'September 2025 · collect what you planted' },
-  '2025-10': { label: 'Oct: Veil',      icon: '🌑',  desc: 'October 2025 · the thinning of things' },
-  '2025-11': { label: 'Nov: Fog',       icon: '🌫️', desc: 'November 2025 · visibility low, pace steady' },
-  '2025-12': { label: 'Dec: Lantern',   icon: '🏮',  desc: 'December 2025 · light in the long dark' },
-  '2026-01': { label: 'Jan: Frost',     icon: '❄️',  desc: 'January 2026 · cold start, clear mind' },
-  '2026-02': { label: 'Feb: Drift',     icon: '🌬️', desc: 'February 2026 · let it settle' },
-  '2026-03': { label: 'Mar: Thaw',      icon: '🫧',  desc: 'March 2026 · things begin to move' },
-  '2026-04': { label: 'Apr: Cipher',    icon: '🔐',  desc: 'April 2026 · decode the pattern' },
-  '2026-05': { label: 'May: Bloom',     icon: '🌸',  desc: 'May 2026 · something is growing' },
-  '2026-06': { label: 'Jun: Haze',      icon: '🌿',  desc: 'June 2026 · warm and full of motion' },
-  '2026-07': { label: 'Jul: Mirage',    icon: '🌅',  desc: 'July 2026 · keep going' },
-  '2026-08': { label: 'Aug: Monsoon',   icon: '🌧️', desc: 'August 2026 · let it rain' },
-  '2026-09': { label: 'Sep: Amber',     icon: '🍁',  desc: 'September 2026 · things hold colour' },
-  '2026-10': { label: 'Oct: Shadow',    icon: '🕸️', desc: 'October 2026 · the archive grows' },
-  '2026-11': { label: 'Nov: Iron',      icon: '⚙️',  desc: 'November 2026 · built to last' },
-  '2026-12': { label: 'Dec: Solstice',  icon: '✨',  desc: 'December 2026 · the year closes' },
-  '2027-01': { label: 'Jan: Silence',   icon: '🤍',  desc: 'January 2027 · space to begin' },
-  '2027-02': { label: 'Feb: Pulse',     icon: '❤️',  desc: 'February 2027 · something alive here' },
-  '2027-03': { label: 'Mar: Bloom',     icon: '🌺',  desc: 'March 2027 · second spring' },
-  '2027-04': { label: 'Apr: Fracture',  icon: '⚡',  desc: 'April 2027 · break and rebuild' },
-  '2027-05': { label: 'May: Ritual',    icon: '🕯️', desc: 'May 2027 · the practice deepens' },
-  '2027-06': { label: 'Jun: Prism',     icon: '🔮',  desc: 'June 2027 · light through glass' },
-  '2027-07': { label: 'Jul: Zenith',    icon: '🌟',  desc: 'July 2027 · peak of the arc' },
-  '2027-08': { label: 'Aug: Flux',      icon: '🌀',  desc: 'August 2027 · everything in motion' },
-  '2027-09': { label: 'Sep: Archive',   icon: '📚',  desc: 'September 2027 · the record grows' },
-  '2027-10': { label: 'Oct: Phantom',   icon: '👻',  desc: 'October 2027 · haunt the old patterns' },
-  '2027-11': { label: 'Nov: Ruin',      icon: '🏚️', desc: 'November 2027 · beautiful wreckage' },
-  '2027-12': { label: 'Dec: Epoch',     icon: '🌍',  desc: 'December 2027 · end of an era' },
-};
+export const LEARNING_TAGS = _LEARNING_TAGS;
+export const CREATIVE_TAGS  = _CREATIVE_TAGS;
+
+// ─────────────────────────────────────────
+// MONTHLY CARD DATA  (edit src/lib/data/monthlyCards.js)
+// ─────────────────────────────────────────
+export const MONTHLY_CARD_DATA = _MONTHLY_CARD_DATA;
 
 // Build the full ordered list of month keys
 export function getAllMonthKeys() {
@@ -93,121 +78,15 @@ const DEFAULT_PLAYER = {
   attributes: { focus: 0, creativity: 0, consistency: 0, learning: 0, endurance: 0 }
 };
 
-const DEFAULT_INVENTORY = [
-  { id: 'i1', label: 'Tome of Focus',    icon: '📜', rarity: 'rare',      type: 'accessory', equipped: false, equip: null },
-  { id: 'i2', label: 'Clarity Vial',     icon: '⚗️', rarity: 'common',    type: 'accessory', equipped: false, equip: null },
-  { id: 'i3', label: 'Pixel Sword',      icon: '🗡️', rarity: 'epic',      type: 'weapon',    equipped: false, equip: null },
-  { id: 'i4', label: 'Herbalist Badge',  icon: '🌿', rarity: 'common',    type: 'badge',     equipped: false, equip: null },
-  { id: 'i5', label: 'Archive Key',      icon: '🔑', rarity: 'legendary', type: 'accessory', equipped: false, equip: null },
-  { id: 'i6', label: 'Ember Fragment',   icon: '🔥', rarity: 'rare',      type: 'accessory', equipped: false, equip: null },
-];
+// (edit src/lib/data/defaultInventory.js)
+const DEFAULT_INVENTORY = _DEFAULT_INVENTORY;
+// (edit src/lib/data/defaultAwards.js)
+const DEFAULT_AWARDS = _DEFAULT_AWARDS.map(a => ({ ...a, earnedAt: Date.now() }));
+// (edit src/lib/data/shopItems.js)
+const SHOP_DEFAULT_ITEMS = _SHOP_DEFAULT_ITEMS;
 
-const DEFAULT_AWARDS = [
-  { id: 'a1', label: 'First Flame',  type: 'normal',  desc: 'Completed your first task',         icon: '🔥', earnedAt: Date.now() },
-  { id: 'a2', label: '7-Day Ember',  type: 'special', desc: 'Special: unlocks hidden quest chain',icon: '💎', earnedAt: Date.now() },
-  { id: 'a3', label: 'Night Owl',    type: 'normal',  desc: '5 tasks completed after 10pm',       icon: '🦉', earnedAt: Date.now() },
-  { id: 'a4', label: 'Depth Seeker', type: 'special', desc: 'Special: unlocks the Deep Archive',  icon: '🗝️',earnedAt: Date.now() },
-  { id: 'a5', label: 'Word Smith',   type: 'normal',  desc: 'Created 10 writing tasks',           icon: '✍️',earnedAt: Date.now() },
-  { id: 'a6', label: 'Iron Will',    type: 'normal',  desc: 'Completed 5 hard tasks in a row',    icon: '⚔️',earnedAt: Date.now() },
-];
-
-const SHOP_DEFAULT_ITEMS = [
-  { id: 's1',  label: 'Oak Staff',           icon: '🪄', rarity: 'common',    type: 'weapon',    price: 60,  desc: 'A sturdy staff carved from ancient oak.' },
-  { id: 's2',  label: 'Moonstone Ring',       icon: '💍', rarity: 'rare',      type: 'accessory', price: 120, desc: 'Glows faintly under moonlight.' },
-  { id: 's3',  label: 'Leather Cloak',        icon: '🧥', rarity: 'common',    type: 'clothing',  price: 80,  desc: 'Worn but reliable. Keeps the chill out.' },
-  { id: 's4',  label: "Scholar's Tome",       icon: '📚', rarity: 'rare',      type: 'accessory', price: 150, desc: '+5 Learning on equip.' },
-  { id: 's5',  label: 'Iron Shield',          icon: '🛡️', rarity: 'common',   type: 'weapon',    price: 90,  desc: 'Solid protection. Dented but dependable.' },
-  { id: 's6',  label: 'Witch Hat',            icon: '🎩', rarity: 'epic',      type: 'clothing',  price: 200, desc: 'Adds an air of mystery to any outfit.' },
-  { id: 's7',  label: 'Golden Compass',       icon: '🧭', rarity: 'rare',      type: 'accessory', price: 175, desc: 'Always points toward your goals.' },
-  { id: 's8',  label: 'Flame Gauntlet',       icon: '🧤', rarity: 'epic',      type: 'clothing',  price: 220, desc: 'Heat resistant. Looks incredible.' },
-  { id: 's9',  label: "Philosopher's Eye",    icon: '🔮', rarity: 'legendary', type: 'accessory', price: 500, desc: 'Reveals hidden patterns in everything.' },
-  { id: 's10', label: 'Forest Boots',         icon: '👢', rarity: 'common',    type: 'clothing',  price: 70,  desc: 'Silent on any terrain.' },
-  { id: 's11', label: 'Storm Amulet',         icon: '⚡', rarity: 'rare',      type: 'accessory', price: 140, desc: 'Crackles with stored energy.' },
-  { id: 's12', label: 'Shadow Dagger',        icon: '🔪', rarity: 'epic',      type: 'weapon',    price: 280, desc: 'Leaves no trace. Hacker-exclusive lore.' },
-];
-
-export const NPC_CRAFTSMEN = [
-  {
-    id: 'tailor', name: 'Mireille', title: 'The Tailor', icon: '🧵', cost: 50,
-    desc: 'Crafts custom clothing & cloaks',
-    personality: 'refined, slightly dramatic, uses fashion metaphors',
-    greetings: [
-      "Ah, a visitor! Please, do come in — I was just finishing a rather *spectacular* hemline.",
-      "Oh darling, your timing is impeccable. I have thread to spare and ideas to burn.",
-      "Welcome to my atelier. Mind the pins — they have opinions of their own.",
-      "A customer! How delightful. Tell me, what silhouette are we going for today?",
-      "Come in, come in. I can tell just by looking at you that we have *work* to do.",
-    ],
-    reactions: [
-      "Magnificent. Truly, I have outdone myself once again.",
-      "Oh this is *divine*. You have impeccable taste. Clearly.",
-      "Stunning. I may weep. Just a little. It's very on-brand for me.",
-      "Perfection, wrapped in fabric and tied with ambition. That's you now.",
-      "I'll remember this commission. Frame-worthy, truly.",
-    ],
-    itemType: 'clothing',
-  },
-  {
-    id: 'blacksmith', name: 'Rork', title: 'The Blacksmith', icon: '⚒️', cost: 75,
-    desc: 'Forges custom weapons & tools',
-    personality: 'gruff, honest, secretly sentimental, hates small talk',
-    greetings: [
-      "Aye. What do you need. Speak fast, I've got iron in the fire.",
-      "You look like someone who needs a weapon. Or a tool. Either way, I can help.",
-      "Don't touch anything. Tell me what you want. I'll make it. That's how this works.",
-      "Heard you coming from three blocks. Good. Means you're not trying to sneak up on me.",
-      "Workshop's open. Name's Rork. What are we making.",
-    ],
-    reactions: [
-      "It's done. Don't break it. I mean it.",
-      "Good steel. Good work. You won't find better. Now go.",
-      "...I'm actually proud of this one. Don't tell anyone I said that.",
-      "Functional. Beautiful. Built to outlast everything. Just like me.",
-      "Hm. Yeah. That's a good piece. Take care of it.",
-    ],
-    itemType: 'weapon',
-  },
-  {
-    id: 'artisan', name: 'Pip', title: 'The Artisan', icon: '🎨', cost: 60,
-    desc: 'Creates accessories & art pieces',
-    personality: 'chaotic enthusiastic, talks too fast, always paint-stained',
-    greetings: [
-      "OH! A customer! Sorry I'm just — hold on — there we go. Hi! What are we making today?!",
-      "You came at the perfect time, I just had the most INCREDIBLE idea and I need someone to make it for.",
-      "Welcome welcome welcome! Ignore the mess. Actually no, the mess is part of the process. Sit down!",
-      "I was JUST thinking about you! Well, not you specifically, but someone like you. Same thing.",
-      "New commission! YES. Okay. Tell me everything. No, wait. Let ME guess first.",
-    ],
-    reactions: [
-      "I LOVE it. I love it so much. This is my best work ever. Until next time.",
-      "Oh it's PERFECT. Are you crying? I'm crying. This is fine.",
-      "Stunning! Breathtaking! Museum-worthy! Okay maybe that's too much but STILL.",
-      "Yes yes YES. That's exactly what I pictured and somehow even better.",
-      "Done! Wait — one more tiny detail — DONE. Okay now it's done. Go enjoy it!",
-    ],
-    itemType: 'accessory',
-  },
-  {
-    id: 'collector', name: 'Vesper', title: 'The Antique Collector', icon: '🏺', cost: 100,
-    desc: 'Provides rare relics & curiosities',
-    personality: 'mysterious, speaks in half-riddles, knows too much',
-    greetings: [
-      "I was expecting you. Not today specifically, but... soon. And here you are.",
-      "Every object has a story. Yours is still being written. Interesting.",
-      "Sit. Don't ask how I got these things. Focus on what you need.",
-      "You have the look of someone searching for something they can't name yet.",
-      "My collection grows stranger every season. As do my customers. Welcome.",
-    ],
-    reactions: [
-      "This item will serve you in ways you don't yet understand. Keep it close.",
-      "Curious. I've never made one quite like that before. It suits you.",
-      "Take it. Some objects choose their owners. This one has chosen you.",
-      "Remarkable. Even I am surprised, and I am rarely surprised.",
-      "Guard it well. Things of meaning have a way of attracting attention.",
-    ],
-    itemType: 'accessory',
-  },
-];
+// (edit src/lib/data/craftsmen.js)
+export const NPC_CRAFTSMEN = _NPC_CRAFTSMEN;
 
 // ─────────────────────────────────────────
 // XP / REWARD CALCULATION
@@ -340,12 +219,23 @@ export const appState = $state({
   craftConversation: [],
 
   profileTab: 'overview',
+
+  // Auth — set by +layout.svelte after Supabase initialises
+  user: null,
+
+  // UI flags
+  showCalendarModal: false,
 });
 
 // Migrate old player data: ensure new fields exist
 if (appState.player.totalTime      === undefined) appState.player.totalTime      = 0;
 if (appState.player.longestStreak  === undefined) appState.player.longestStreak  = appState.player.streak || 0;
 if (appState.player.focusUses      === undefined) appState.player.focusUses      = 0;
+// Ensure all attribute keys are present (old saves may be missing some)
+if (!appState.player.attributes) appState.player.attributes = {};
+for (const k of ['focus','creativity','consistency','learning','endurance']) {
+  if (appState.player.attributes[k] === undefined) appState.player.attributes[k] = 0;
+}
 
 // ─────────────────────────────────────────
 // AUTO-PERSIST
@@ -411,10 +301,10 @@ export function notify(message, type = 'info') {
 // ─────────────────────────────────────────
 // FOCUS MODE
 // ─────────────────────────────────────────
-/** Call this whenever the user starts a focus session. */
+/** Call this whenever the user completes a focus session. */
 export function addFocusUse() {
   appState.player.focusUses = (appState.player.focusUses || 0) + 1;
-  // focus attribute: raw count, max 1000 for radar scaling
+  // focus attribute: raw count of sessions, max 1000 for radar scaling
   appState.player.attributes.focus = appState.player.focusUses;
 
   // track in monthly stats
@@ -608,117 +498,10 @@ function updateStreak(collectedAt = Date.now()) {
 }
 
 // ─────────────────────────────────────────
-// ACHIEVEMENTS
+// ACHIEVEMENTS  (edit src/lib/data/achievementRules.js)
 // ─────────────────────────────────────────
-/**
- * ACHIEVEMENT_RULES
- * repeatable: true  → badge can be earned multiple times (e.g. Early Bird each morning)
- * check(collectedAt) → receives the timestamp of the triggering action
- */
-export const ACHIEVEMENT_RULES = [
-  {
-    id: 'first_task',  label: 'First Flame',   icon: '🔥', type: 'normal',
-    desc: 'Completed your first task',
-    check: () => appState.player.totalDone >= 1,
-  },
-  {
-    id: 'ten_tasks',   label: 'Decade',         icon: '🌟', type: 'normal',
-    desc: '10 tasks completed',
-    check: () => appState.player.totalDone >= 10,
-  },
-  {
-    id: 'fifty_tasks', label: 'Half-Century',   icon: '🏅', type: 'normal',
-    desc: '50 tasks completed',
-    check: () => appState.player.totalDone >= 50,
-  },
-  {
-    id: 'streak_7',    label: '7-Day Ember',    icon: '💎', type: 'special',
-    desc: 'Maintained a 7-day streak',
-    check: () => (appState.player.longestStreak || 0) >= 7,
-  },
-  {
-    id: 'streak_30',   label: 'Eternal Flame',  icon: '🌋', type: 'special',
-    desc: 'Maintained a 30-day streak',
-    check: () => (appState.player.longestStreak || 0) >= 30,
-  },
-  {
-    id: 'level_5',     label: 'Apprentice+',    icon: '📈', type: 'normal',
-    desc: 'Reached Level 5',
-    check: () => appState.player.level >= 5,
-  },
-  {
-    id: 'hard_5',      label: 'Iron Will',      icon: '⚔️', type: 'normal',
-    desc: '5 hard tasks completed',
-    check: () => appState.taskHistory.filter(t => t.difficulty === 'hard').length >= 5,
-  },
-  // ── Time-of-day badges (use local time, repeatable) ────────────────────
-  {
-    id: 'early_bird',  label: 'Early Bird',     icon: '🌅', type: 'normal',
-    desc: 'Collected a task between 5am–9am',
-    repeatable: true,
-    // @ts-ignore
-    check: (ts = Date.now()) => {
-      const h = new Date(ts).getHours(); // local time
-      return h >= 5 && h < 9;
-    },
-  },
-  {
-    id: 'night_owl',   label: 'Night Owl',      icon: '🦉', type: 'normal',
-    desc: 'Collected a task after 10pm or before 3am',
-    repeatable: true,
-    // @ts-ignore
-    check: (ts = Date.now()) => {
-      const h = new Date(ts).getHours(); // local time
-      return h >= 22 || h < 3;
-    },
-  },
-  {
-    id: 'midday',      label: 'Sun-Chaser',     icon: '☀️', type: 'normal',
-    desc: 'Collected a task at noon (11am–1pm)',
-    repeatable: true,
-    // @ts-ignore
-    check: (ts = Date.now()) => {
-      const h = new Date(ts).getHours();
-      return h >= 11 && h < 13;
-    },
-  },
-  // ── Skill badges ─────────────────────────────────────────────────────────
-  {
-    id: 'focus_50',    label: 'Flow State',     icon: '🎯', type: 'normal',
-    desc: '50 focus sessions completed',
-    check: () => (appState.player.focusUses || 0) >= 50,
-  },
-  {
-    id: 'focus_500',   label: 'Locked In',      icon: '🧠', type: 'special',
-    desc: '500 focus sessions — you\'re dedicated',
-    check: () => (appState.player.focusUses || 0) >= 500,
-  },
-  {
-    id: 'learning_10', label: 'Scholar',        icon: '📚', type: 'normal',
-    desc: '10 learning tasks completed',
-    check: () => (appState.player.attributes.learning || 0) >= 10,
-  },
-  {
-    id: 'learning_50', label: 'Archivist',      icon: '🗃️', type: 'special',
-    desc: '50 learning tasks completed',
-    check: () => (appState.player.attributes.learning || 0) >= 50,
-  },
-  {
-    id: 'creative_10', label: 'Artisan',        icon: '🎨', type: 'normal',
-    desc: '10 creative tasks or customisations',
-    check: () => (appState.player.attributes.creativity || 0) >= 10,
-  },
-  {
-    id: 'time_100h',   label: 'Century',        icon: '⏱️', type: 'special',
-    desc: '100 hours of focused work',
-    check: () => (appState.player.totalTime || 0) >= 6000,
-  },
-  {
-    id: 'depth_seeker',label: 'Depth Seeker',   icon: '🗝️', type: 'special',
-    desc: 'Special: unlocks the Deep Archive',
-    check: () => false, // granted manually / future quest
-  },
-];
+// Rules now use check(state, ts) — state is the full appState, ts is the event timestamp.
+export const ACHIEVEMENT_RULES = _ACHIEVEMENT_RULES;
 
 // @ts-ignore
 export function checkAchievements(collectedAt = Date.now()) {
@@ -731,7 +514,7 @@ export function checkAchievements(collectedAt = Date.now()) {
   }
 
   for (const rule of ACHIEVEMENT_RULES) {
-    const triggered = rule.check(collectedAt);
+    const triggered = rule.check(appState, collectedAt);
     if (!triggered) continue;
 
     if (rule.repeatable) {
@@ -761,10 +544,18 @@ export function checkAchievements(collectedAt = Date.now()) {
 // INVENTORY / EQUIP
 // ─────────────────────────────────────────
 // @ts-ignore
+// Layer types that allow only one equipped item at a time
+const SINGLETON_LAYERS = new Set(['body', 'hair', 'outfit', 'expression', 'bg']);
+
 export function toggleEquip(itemId) {
   // @ts-ignore
   const item = appState.inventory.find(i => i.id === itemId);
   if (!item) return;
+  // Singleton layers: unequip any other item of the same type before equipping
+  if (SINGLETON_LAYERS.has(item.type) && !item.equipped) {
+    // @ts-ignore
+    appState.inventory.forEach(i => { if (i.type === item.type) i.equipped = false; });
+  }
   item.equipped = !item.equipped;
   notify(
     appState.theme === 'hacker'
@@ -833,19 +624,19 @@ export function visitCraftsman(craftsmanId) {
 }
 
 // @ts-ignore
-export function submitCustomItem(itemLabel, imageDataUrl, itemDesc) {
+export function submitCustomItem(itemLabel, imageDataUrl, itemDesc, layerTypeOverride) {
   const npc = appState.activeCraftsman;
   if (!npc) return;
+  // @ts-ignore
+  const itemType = layerTypeOverride || npc.itemType;
   const newItem = {
     id: crypto.randomUUID(),
     label: itemLabel,
     icon: imageDataUrl,
     isImage: true,
     rarity: 'epic',
-    // @ts-ignore
-    type: npc.itemType,
-    // @ts-ignore
-    desc: itemDesc || `Custom ${npc.itemType} crafted by ${npc.name}.`,
+    type: itemType,
+    desc: itemDesc || `Custom ${itemType} crafted by ${npc.name}.`,
     equipped: false, equip: null, custom: true,
     // @ts-ignore
     craftedBy: npc.name,
@@ -867,6 +658,33 @@ export function submitCustomItem(itemLabel, imageDataUrl, itemDesc) {
       ? `> ITEM CRAFTED: ${itemLabel} added to inventory`
       // @ts-ignore
       : `✨ ${npc.name} crafted: ${itemLabel}! Check your inventory.`,
+    'success'
+  );
+}
+
+// Free upload — no craftsman or gold required
+// @ts-ignore
+export function uploadItem(itemLabel, imageDataUrl, itemDesc, itemType) {
+  if (!itemLabel?.trim() || !imageDataUrl) return;
+  const newItem = {
+    id: crypto.randomUUID(),
+    label: itemLabel.trim(),
+    icon: imageDataUrl,
+    isImage: true,
+    rarity: 'common',
+    type: itemType || 'accessory',
+    desc: itemDesc?.trim() || '',
+    equipped: false, equip: null, custom: true,
+  };
+  appState.inventory.push(newItem);
+  appState.player.attributes.creativity = (appState.player.attributes.creativity || 0) + 1;
+  const key = currentMonthKey();
+  const ms  = getOrCreateMonthlyStats(key);
+  ms.creativeTasks = (ms.creativeTasks || 0) + 1;
+  notify(
+    appState.theme === 'hacker'
+      ? `> UPLOADED: ${itemLabel} added to inventory`
+      : `📁 Uploaded: ${itemLabel}! Check your inventory.`,
     'success'
   );
 }

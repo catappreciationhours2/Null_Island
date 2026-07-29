@@ -3,7 +3,7 @@ import { appState, toggleEquip, saveEquipTransform, notify } from '$lib/stores/a
 import { onMount } from 'svelte';
 
 let isHacker = $derived(appState.theme === 'hacker');
-let p = $derived(appState.player);
+let p = $derived(appState.player); // used in template for XP, level, gold etc.
 let profileTab = $state('overview');
 
 // ── Attribute config ──────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ function drawRadar() {
   const c = radarCanvas;
   if (!c) return;
   const ctx = c.getContext('2d');
-  const W = 220, H = 200, cx = 110, cy = 100, maxR = 70;
+  const W = 290, H = 200, cx = 145, cy = 100, maxR = 70;
   ctx.clearRect(0, 0, W, H);
   const isH      = appState.theme === 'hacker';
   const accentCol  = isH ? '#00ff41' : '#7a9e5e';
@@ -65,9 +65,10 @@ function drawRadar() {
 
   // data polygon — ratio = attrValue / attrMax
   // no hard cap: if ratio > 1 the polygon exceeds the outer ring proportionally
+  const attrs = appState.player.attributes;
   const vals = ATTR_KEYS.map(k => {
     const maxVal = ATTR_MAXES[k] || 100;
-    return (p.attributes[k] || 0) / maxVal;
+    return (attrs[k] || 0) / maxVal;
   });
 
   ctx.beginPath();
@@ -106,14 +107,31 @@ function drawRadar() {
 }
 
 onMount(() => drawRadar());
-$effect(() => { appState.theme; appState.player.attributes.focus; drawRadar(); });
+// Explicitly read every attribute directly from appState so Svelte tracks each one.
+// Using p (derived from the player object reference) doesn't create fine-grained
+// subscriptions when only nested properties mutate — so we go direct.
+$effect(() => {
+  const a = appState.player.attributes;
+  // reading each property creates a reactive subscription to it
+  a.focus; a.creativity; a.consistency; a.learning; a.endurance;
+  appState.theme;
+  drawRadar();
+});
 
 // ── Character Customizer ──────────────────────────────────────────────────
+// Layer draw order: lower number renders first (furthest back)
+const LAYER_ORDER = { bg:0, body:1, outfit:2, hair:3, expression:4, accessory:5, weapon:5, clothing:5 };
+
 // @ts-ignore
 let charCanvas   = $state(null);
 let selectedEq   = $state(null);
 let isDragging   = $state(false);
 let dragStart    = $state(null);
+
+function layerZ(item) {
+  // @ts-ignore
+  return (LAYER_ORDER[item.type] ?? 5) * 1000 + (item.equip?.zIndex || 0);
+}
 
 function drawChar() {
   // @ts-ignore
@@ -129,28 +147,28 @@ function drawChar() {
   ctx.lineWidth = 0.5;
   for (let x = 0; x < 160; x += 16) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,160); ctx.stroke(); }
   for (let y = 0; y < 160; y += 16) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(160,y); ctx.stroke(); }
-  const S = 5, ox = 56, oy = 16;
-  const pal = isH
-    ? { skin:'#00ff41', hair:'#003300', shirt:'#003300', pants:'#001400', eyes:'#00ffff' }
-    : { skin:'#f5c89a', hair:'#7a4020', shirt:'#5b7fa6', pants:'#3d2f1e', eyes:'#3d2f1e' };
-  // @ts-ignore
-  const px = (x, y, col) => { ctx.fillStyle = pal[col]||col; ctx.fillRect(ox+x*S, oy+y*S, S, S); };
-  [
-    [2,0,'hair'],[3,0,'hair'],[4,0,'hair'],
-    [1,1,'hair'],[2,1,'skin'],[3,1,'skin'],[4,1,'skin'],[5,1,'hair'],
-    [1,2,'skin'],[2,2,'skin'],[3,2,'skin'],[4,2,'skin'],[5,2,'skin'],
-    [2,2,'eyes'],[4,2,'eyes'],
-    [1,3,'skin'],[2,3,'skin'],[3,3,'skin'],[4,3,'skin'],[5,3,'skin'],
-    [0,4,'shirt'],[1,4,'shirt'],[2,4,'shirt'],[3,4,'shirt'],[4,4,'shirt'],[5,4,'shirt'],[6,4,'shirt'],
-    [0,5,'shirt'],[1,5,'shirt'],[2,5,'shirt'],[3,5,'shirt'],[4,5,'shirt'],[5,5,'shirt'],[6,5,'shirt'],
-    [0,6,'shirt'],[1,6,'shirt'],[2,6,'shirt'],[3,6,'shirt'],[4,6,'shirt'],[5,6,'shirt'],[6,6,'shirt'],
-    [1,7,'pants'],[2,7,'pants'],[3,7,'pants'],[4,7,'pants'],[5,7,'pants'],
-    [1,8,'pants'],[2,8,'pants'],[3,8,'pants'],[4,8,'pants'],[5,8,'pants'],
-    [1,9,'pants'],[2,9,'pants'],[4,9,'pants'],[5,9,'pants'],
-  ].forEach(([x, y, col]) => px(x, y, col));
 
+  // All equipped items sorted by layer type then zIndex
   // @ts-ignore
-  const equipped = appState.inventory.filter(i => i.equipped);
+  const allEquipped = appState.inventory.filter(i => i.equipped)
+    .slice().sort((a, b) => layerZ(a) - layerZ(b));
+
+  if (allEquipped.length === 0) {
+    ctx.fillStyle = isH ? '#4aaa4a33' : '#8a7a6a33';
+    ctx.font = '48px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🧍', 80, 76);
+    ctx.fillStyle = isH ? '#4aaa4a' : '#9a8a7a';
+    ctx.font = `8px ${isH ? 'Share Tech Mono, monospace' : 'Lora, serif'}`;
+    ctx.textBaseline = 'top';
+    ctx.fillText(isH ? '// upload items via shop' : 'Upload items in the Shop', 80, 128);
+    return;
+  }
+
+  // Sort by zIndex so higher-z items render on top
+  // @ts-ignore
+  const equipped = allEquipped;
   // @ts-ignore
   equipped.forEach(item => {
     const t = item.equip || { x:80, y:80, scale:1, rotation:0 };
@@ -198,8 +216,10 @@ function toCanvas(e) {
 // @ts-ignore
 function onCanvasClick(e) {
   const { mx, my } = toCanvas(e);
+  // Reverse layer+zIndex sort so topmost visible item wins click
   // @ts-ignore
-  const equipped = appState.inventory.filter(i => i.equipped);
+  const equipped = appState.inventory.filter(i => i.equipped)
+    .slice().sort((a, b) => layerZ(b) - layerZ(a));
   let hit = null;
   for (const item of equipped) {
     const t = item.equip || { x:80, y:80, scale:1, rotation:0 };
@@ -233,6 +253,19 @@ function onCanvasMouseMove(e) {
 
 function onCanvasMouseUp() { isDragging = false; dragStart = null; }
 
+// Shared move helper — used by D-pad buttons AND keyboard arrows
+// @ts-ignore
+function moveSelected(dx, dy) {
+  if (!selectedEq) return;
+  // @ts-ignore
+  const cur = selectedEq.equip || { x:80, y:80, scale:1, rotation:0 };
+  // @ts-ignore
+  saveEquipTransform(selectedEq.id, { ...cur, x: cur.x + dx, y: cur.y + dy });
+  // @ts-ignore
+  selectedEq = appState.inventory.find(i => i.id === selectedEq.id);
+  drawChar();
+}
+
 // @ts-ignore
 function onCanvasKeyDown(e) {
   if (!selectedEq) return;
@@ -248,16 +281,41 @@ function onCanvasKeyDown(e) {
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') dx = e.key === 'ArrowUp' ? -STEP : STEP;
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') dy = e.key === 'ArrowLeft' ? STEP : -STEP;
     }
-    // @ts-ignore
-    const cur = selectedEq.equip || { x:80, y:80, scale:1, rotation:0 };
-    // @ts-ignore
-    saveEquipTransform(selectedEq.id, { ...cur, x: cur.x+dx, y: cur.y+dy });
-    // @ts-ignore
-    selectedEq = appState.inventory.find(i => i.id === selectedEq.id);
-    drawChar();
+    moveSelected(dx, dy);
     return;
   }
   if (e.key === 'Escape') { e.preventDefault(); selectedEq = null; drawChar(); }
+}
+
+// ── Layering: Send to Back / Bring to Front ───────────────────────────────
+function bringToFront() {
+  if (!selectedEq) return;
+  // @ts-ignore
+  // @ts-ignore
+  const equipped = appState.inventory.filter(i => i.equipped);
+  const maxZ = equipped.reduce((m, i) => Math.max(m, i.equip?.zIndex || 0), 0);
+  // @ts-ignore
+  const cur = selectedEq.equip || { x:80, y:80, scale:1, rotation:0 };
+  // @ts-ignore
+  saveEquipTransform(selectedEq.id, { ...cur, zIndex: maxZ + 1 });
+  // @ts-ignore
+  selectedEq = appState.inventory.find(i => i.id === selectedEq.id);
+  drawChar();
+}
+
+function sendToBack() {
+  if (!selectedEq) return;
+  // @ts-ignore
+  // @ts-ignore
+  const equipped = appState.inventory.filter(i => i.equipped);
+  const minZ = equipped.reduce((m, i) => Math.min(m, i.equip?.zIndex || 0), 0);
+  // @ts-ignore
+  const cur = selectedEq.equip || { x:80, y:80, scale:1, rotation:0 };
+  // @ts-ignore
+  saveEquipTransform(selectedEq.id, { ...cur, zIndex: minZ - 1 });
+  // @ts-ignore
+  selectedEq = appState.inventory.find(i => i.id === selectedEq.id);
+  drawChar();
 }
 
 // @ts-ignore
@@ -346,6 +404,23 @@ function fmtDate(ts) {
             {/if}
             <span class="ctrl-label">{selectedEq.label}</span>
           </div>
+          <!-- D-pad: visual buttons synced with keyboard arrows -->
+          <div class="ctrl-row">
+            <span class="ctrl-key">move</span>
+            <div class="dpad">
+              <div class="dpad-row">
+                <button class="dpad-btn" onclick={() => moveSelected(0, -3)} title="Up (↑)">↑</button>
+              </div>
+              <div class="dpad-row">
+                <button class="dpad-btn" onclick={() => moveSelected(-3, 0)} title="Left (←)">←</button>
+                <div class="dpad-center"></div>
+                <button class="dpad-btn" onclick={() => moveSelected(3, 0)} title="Right (→)">→</button>
+              </div>
+              <div class="dpad-row">
+                <button class="dpad-btn" onclick={() => moveSelected(0, 3)} title="Down (↓)">↓</button>
+              </div>
+            </div>
+          </div>
           <div class="ctrl-row">
             <span class="ctrl-key">rotate</span>
             <button class="ctrl-btn" onclick={() => adjustSelected('rotation', -15)}>↺</button>
@@ -356,13 +431,18 @@ function fmtDate(ts) {
             <button class="ctrl-btn" onclick={() => adjustSelected('scale', 0.1)}>+</button>
             <button class="ctrl-btn" onclick={() => adjustSelected('scale', -0.1)}>−</button>
           </div>
+          <div class="ctrl-row">
+            <span class="ctrl-key">layer</span>
+            <button class="ctrl-btn layer-btn" onclick={sendToBack} title="Send to back">⬇ Back</button>
+            <button class="ctrl-btn layer-btn" onclick={bringToFront} title="Bring to front">⬆ Front</button>
+          </div>
           <button class="ctrl-btn unequip" onclick={() => { toggleEquip(selectedEq.id); selectedEq = null; }}>
             {isHacker ? 'UNEQUIP' : 'Unequip'}
           </button>
           <div class="ctrl-hint">
             {isHacker
-              ? '// arrows · shift+diag · esc=deselect'
-              : 'Arrow keys to move · Shift+arrow diagonal · Esc to deselect'}
+              ? '// click·drag · arrows · shift+diag · esc=deselect'
+              : 'Click to select · drag or arrow keys to move · Esc to deselect'}
           </div>
         </div>
         {:else}
@@ -379,7 +459,7 @@ function fmtDate(ts) {
     <div class="card radar-card">
       <div class="card-title">{isHacker ? '// ATTRIBUTE_RADAR' : 'Attribute Radar'}</div>
       <div class="radar-wrap">
-        <canvas bind:this={radarCanvas} width="220" height="200"></canvas>
+        <canvas bind:this={radarCanvas} width="290" height="200" style="max-width:100%"></canvas>
       </div>
       <div class="radar-sub">
         {isHacker
@@ -392,17 +472,14 @@ function fmtDate(ts) {
     <div class="card stats-card">
       <div class="card-title">{isHacker ? '// PLAYER_STATS' : 'Stats'}</div>
       <div class="stat-list">
-        <div class="stat-row"><span class="stat-key">{isHacker?'TOTAL_XP':'Total XP'}</span><span class="stat-val accent">{p.xp}</span></div>
-        <div class="stat-row"><span class="stat-key">{isHacker?'LEVEL':'Level'}</span><span class="stat-val">{p.level}</span></div>
-        <div class="stat-row"><span class="stat-key">{isHacker?'GOLD':'Gold earned'}</span><span class="stat-val gold">{p.gold}</span></div>
-        <div class="stat-row"><span class="stat-key">{isHacker?'STREAK':'Current streak'}</span><span class="stat-val">{p.streak}d</span></div>
-        <div class="stat-row"><span class="stat-key">{isHacker?'BEST_STREAK':'Best streak'}</span><span class="stat-val accent">{p.longestStreak || 0}d</span></div>
-        <div class="stat-row"><span class="stat-key">{isHacker?'TOTAL_DONE':'Total completed'}</span><span class="stat-val accent">{p.totalDone}</span></div>
-        <div class="stat-row"><span class="stat-key">{isHacker?'FOCUS_USES':'Focus sessions'}</span><span class="stat-val">{p.focusUses || 0}</span></div>
-        <div class="stat-row">
-          <span class="stat-key">{isHacker?'TIME_LOGGED':'Time logged'}</span>
-          <span class="stat-val accent">{formatTime(p.totalTime)}</span>
-        </div>
+        <div class="stat-row"><span class="stat-key">{isHacker?'TOTAL_XP':'Total XP'}</span><span class="dots"></span><span class="stat-val accent">{p.xp}</span></div>
+        <div class="stat-row"><span class="stat-key">{isHacker?'LEVEL':'Level'}</span><span class="dots"></span><span class="stat-val">{p.level}</span></div>
+        <div class="stat-row"><span class="stat-key">{isHacker?'GOLD':'Gold earned'}</span><span class="dots"></span><span class="stat-val gold">{p.gold}</span></div>
+        <div class="stat-row"><span class="stat-key">{isHacker?'STREAK':'Current streak'}</span><span class="dots"></span><span class="stat-val">{p.streak}d</span></div>
+        <div class="stat-row"><span class="stat-key">{isHacker?'BEST_STREAK':'Best streak'}</span><span class="dots"></span><span class="stat-val accent">{p.longestStreak || 0}d</span></div>
+        <div class="stat-row"><span class="stat-key">{isHacker?'TOTAL_DONE':'Total completed'}</span><span class="dots"></span><span class="stat-val accent">{p.totalDone}</span></div>
+        <div class="stat-row"><span class="stat-key">{isHacker?'FOCUS_USES':'Focus sessions'}</span><span class="dots"></span><span class="stat-val">{p.focusUses || 0}</span></div>
+        <div class="stat-row"><span class="stat-key">{isHacker?'TIME_LOGGED':'Time logged'}</span><span class="dots"></span><span class="stat-val accent">{formatTime(p.totalTime)}</span></div>
       </div>
 
       <div class="card-title" style="margin-top:14px">{isHacker?'// ATTRIBUTES':'Attributes'}</div>
@@ -428,10 +505,10 @@ function fmtDate(ts) {
         <span class="status-badge in-progress">{isHacker?'MISSION_IN_PROGRESS':'Mission In Progress'}</span>
       </div>
       <div class="month-stats">
-        <div class="month-row"><span>Tasks</span><span class="accent">{p.totalDone}</span></div>
-        <div class="month-row"><span>Streak</span><span>{p.streak}d</span></div>
-        <div class="month-row"><span>Time</span><span class="accent">{formatTime(p.totalTime)}</span></div>
-        <div class="month-row"><span>Gold</span><span class="gold">{p.gold}</span></div>
+        <div class="month-row"><span class="mrow-key">{isHacker?'TASKS':'Tasks'}</span><span class="dots"></span><span class="accent">{p.totalDone}</span></div>
+        <div class="month-row"><span class="mrow-key">{isHacker?'STREAK':'Streak'}</span><span class="dots"></span><span>{p.streak}d</span></div>
+        <div class="month-row"><span class="mrow-key">{isHacker?'TIME':'Time'}</span><span class="dots"></span><span class="accent">{formatTime(p.totalTime)}</span></div>
+        <div class="month-row"><span class="mrow-key">{isHacker?'GOLD':'Gold'}</span><span class="dots"></span><span class="gold">{p.gold}</span></div>
       </div>
       <div class="month-footer">{isHacker?'// card locks at month end · never repeats':'This card locks at month end and is yours forever 🌿'}</div>
     </div>
@@ -441,11 +518,14 @@ function fmtDate(ts) {
       <div class="card-title">{isHacker?'// INVENTORY':'Inventory — click to equip/unequip'}</div>
       <div class="inventory-grid">
         {#each appState.inventory as item (item.id)}
+        {@const isLayerSlot = ['body','hair','outfit','expression','bg'].includes(item.type)}
+        {@const slotLabel = {body:'BODY',hair:'HAIR',outfit:'FIT',expression:'EXPR',bg:'BG'}[item.type] ?? 'EQ'}
         <button
           class="inv-slot rarity-{item.rarity}"
           class:equipped={item.equipped}
+          class:layer-slot={isLayerSlot}
           onclick={() => toggleEquip(item.id)}
-          title="{item.label} ({item.rarity}){item.equipped?' · equipped':''}"
+          title="{item.label} ({item.rarity}) · {item.type}{item.equipped ? ' · equipped' : ''}"
         >
           <div class="inv-icon">
             {#if item.isImage}
@@ -455,7 +535,10 @@ function fmtDate(ts) {
             {/if}
           </div>
           <span class="inv-label">{item.label}</span>
-          {#if item.equipped}<span class="eq-badge">{isHacker?'EQ':'✓'}</span>{/if}
+          <span class="inv-type-tag">{item.type}</span>
+          {#if item.equipped}
+            <span class="eq-badge">{isHacker ? slotLabel : '✓'}</span>
+          {/if}
         </button>
         {/each}
         {#each Array(Math.max(0, 8-appState.inventory.length)) as _}
@@ -466,9 +549,7 @@ function fmtDate(ts) {
 
   </div>
 
-  <button class="motivate-btn" onclick={() => notify(isHacker?'> GRIND MODE ACTIVATED — lock in.':'🌿 You\'re doing amazing. One chunk at a time.','success')}>
-    {isHacker?'> need_motivation()':'🌿 Need motivation?'}
-  </button>
+
 
   {:else}
   <!-- History tab -->
@@ -560,16 +641,32 @@ function fmtDate(ts) {
 .month-status { display:flex; margin-top:2px; }
 .status-badge { font-size:10px; font-family:var(--font-mono); padding:2px 7px; border-radius:var(--radius); border:1px solid; }
 .status-badge.in-progress { color:var(--accent2); border-color:var(--accent2); }
-.month-stats { display:flex; flex-direction:column; gap:4px; }
-.month-row { display:flex; justify-content:space-between; font-size:11px; color:var(--text2); }
+.month-stats { display:flex; flex-direction:column; gap:5px; }
+.month-row { display:flex; align-items:flex-end; font-size:11px; color:var(--text2); }
 :global([data-theme="hacker"]) .month-row { font-family:var(--font-mono); font-size:10px; }
+.mrow-key { color:var(--text3); font-family:var(--font-mono); font-size:10px; white-space:nowrap; }
 .month-footer { font-size:10px; color:var(--text3); font-family:var(--font-mono); margin-top:auto; }
+
+/* Dotted leader line */
+.dots { flex:1; border-bottom:1px dotted color-mix(in srgb, var(--border) 80%, transparent); margin:0 5px; align-self:flex-end; margin-bottom:3px; }
+
+/* D-pad */
+.dpad { display:flex; flex-direction:column; align-items:center; gap:1px; }
+.dpad-row { display:flex; align-items:center; gap:1px; justify-content:center; }
+.dpad-center { width:22px; height:22px; }
+.dpad-btn { width:22px; height:22px; padding:0; font-size:11px; font-family:var(--font-mono); background:var(--bg3); border:1px solid var(--border); border-radius:3px; color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .1s; line-height:1; user-select:none; }
+.dpad-btn:hover { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+.dpad-btn:active { transform:scale(0.9); }
+
+/* Layer buttons */
+.ctrl-btn.layer-btn { font-size:10px; padding:3px 6px; }
+.ctrl-btn.layer-btn:hover { background:color-mix(in srgb,var(--accent) 15%,var(--bg3)); color:var(--accent); border-color:var(--accent); }
 
 /* Stats */
 .stat-list { display:flex; flex-direction:column; gap:5px; }
-.stat-row { display:flex; justify-content:space-between; font-size:11px; color:var(--text2); }
+.stat-row { display:flex; align-items:flex-end; font-size:11px; color:var(--text2); }
 :global([data-theme="hacker"]) .stat-row { font-family:var(--font-mono); font-size:10px; }
-.stat-key { color:var(--text3); font-family:var(--font-mono); font-size:10px; }
+.stat-key { color:var(--text3); font-family:var(--font-mono); font-size:10px; white-space:nowrap; }
 .stat-val { font-family:var(--font-mono); font-weight:600; }
 .attr-row { display:flex; align-items:center; gap:5px; }
 .attr-key { font-size:9px; font-family:var(--font-mono); color:var(--text3); width:58px; flex-shrink:0; }
@@ -589,6 +686,9 @@ function fmtDate(ts) {
 .inv-slot.rarity-epic { border-color:#aa44ff66; }
 .inv-slot.rarity-legendary { border-color:var(--gold-color); box-shadow:0 0 7px color-mix(in srgb,var(--gold-color) 25%,transparent); }
 .inv-slot.empty { opacity:.25; cursor:default; }
+.inv-slot.layer-slot { border-style:dashed; }
+.inv-slot.layer-slot.equipped { border-style:solid; }
+.inv-type-tag { font-size:7px; color:var(--text3); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.3px; opacity:.7; }
 .inv-icon { width:22px; height:22px; font-size:20px; display:flex; align-items:center; justify-content:center; pointer-events:none; user-select:none; }
 .custom-item-img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; -webkit-user-drag:none; }
 .inv-label { font-size:9px; font-family:var(--font-mono); color:var(--text3); text-align:center; line-height:1.2; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none; }
@@ -596,9 +696,6 @@ function fmtDate(ts) {
 .eq-badge { position:absolute; top:2px; right:4px; font-size:8px; color:var(--accent); font-family:var(--font-mono); font-weight:bold; }
 
 /* Motivation button */
-.motivate-btn { padding:10px; background:var(--bg2); border:1px dashed var(--border); border-radius:var(--radius-lg); color:var(--text3); font-family:var(--font-ui); font-size:12px; cursor:pointer; transition:all .2s; text-align:center; margin-top:4px; }
-.motivate-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--surface); }
-:global([data-theme="hacker"]) .motivate-btn { font-family:var(--font-mono); font-size:11px; }
 
 /* History */
 .history-view { display:flex; flex-direction:column; gap:10px; }

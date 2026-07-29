@@ -1,5 +1,5 @@
 <script>
-  import { appState, buyItem, visitCraftsman, submitCustomItem, notify, NPC_CRAFTSMEN } from '$lib/stores/appState.svelte.js';
+  import { appState, buyItem, visitCraftsman, submitCustomItem, uploadItem, notify, NPC_CRAFTSMEN } from '$lib/stores/appState.svelte.js';
 
   let isHacker = $derived(appState.theme === 'hacker');
 
@@ -19,12 +19,31 @@
     return appState.inventory.some(i => i.label === item.label);
   }
 
-  // Craft state
-  let craftInput   = $state('');
-  let craftDesc    = $state('');
-  let uploadedImg  = $state(null);   // { dataUrl, name }
-  let submitted    = $state(false);
-  let fileInput    = $state(null);
+  // Layer type options used in both craft form and free upload
+  const LAYER_TYPES = [
+    { value: 'body',       label: '🧍 Body (character base)' },
+    { value: 'hair',       label: '💇 Hair' },
+    { value: 'outfit',     label: '👔 Outfit' },
+    { value: 'expression', label: '😊 Expression / Face' },
+    { value: 'bg',         label: '🖼 Background' },
+    { value: 'accessory',  label: '💍 Accessory' },
+    { value: 'weapon',     label: '⚔️ Weapon' },
+    { value: 'clothing',   label: '🧥 Clothing item' },
+  ];
+
+  // Craft state (craftsman visit)
+  let craftInput     = $state('');
+  let craftDesc      = $state('');
+  let craftLayerType = $state('');         // '' = use craftsman default
+  let uploadedImg    = $state(null);       // { dataUrl, name }
+  let submitted      = $state(false);
+  let fileInput      = $state(null);
+
+  // Free upload state (multi-file)
+  let freeUploads   = $state([]);   // [{ dataUrl, label, desc, layerType }]
+  let freeFileInput = $state(null);
+  let uploadDone    = $state(false);
+  let uploadedCount = $state(0);
   // @ts-ignore
   let conversation = $derived(appState.craftConversation);
   let activeCraft  = $derived(appState.activeCraftsman);
@@ -129,14 +148,65 @@
     });
 
     // @ts-ignore
-    submitCustomItem(craftInput.trim(), uploadedImg.dataUrl, craftDesc.trim());
-    submitted   = true;
-    craftInput  = '';
-    craftDesc   = '';
-    uploadedImg = null;
+    submitCustomItem(craftInput.trim(), uploadedImg.dataUrl, craftDesc.trim(), craftLayerType || null);
+    submitted      = true;
+    craftInput     = '';
+    craftDesc      = '';
+    craftLayerType = '';
+    uploadedImg    = null;
   }
 
-  const TYPE_LABELS = { all:'All', weapon:'Weapons', clothing:'Clothing', accessory:'Accessories' };
+  // @ts-ignore
+  function onFreeFileChange(e) {
+    const files = Array.from(e.target.files || []);
+    for (const file of files) {
+      // @ts-ignore
+      if (!file.type.startsWith('image/')) continue;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 48; canvas.height = 48;
+          const ctx = canvas.getContext('2d');
+          // @ts-ignore
+          const scale = Math.max(48 / img.width, 48 / img.height);
+          // @ts-ignore
+          const sw = img.width * scale, sh = img.height * scale;
+          const sx = (48 - sw) / 2, sy = (48 - sh) / 2;
+          // @ts-ignore
+          ctx.drawImage(img, sx, sy, sw, sh);
+          // @ts-ignore
+          const auto = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          freeUploads = [...freeUploads, { dataUrl: canvas.toDataURL('image/png'), label: auto, desc: '', layerType: 'body' }];
+        };
+        // @ts-ignore
+        img.src = ev.target.result;
+      };
+      // @ts-ignore
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+  }
+
+  function doFreeUpload() {
+    const valid = freeUploads.filter(u => u.label.trim());
+    if (!valid.length) return;
+    for (const u of valid) {
+      // @ts-ignore
+      uploadItem(u.label.trim(), u.dataUrl, u.desc.trim(), u.layerType);
+    }
+    uploadedCount = valid.length;
+    freeUploads = [];
+    uploadDone = true;
+  }
+
+  // @ts-ignore
+  function removeUpload(idx) {
+    freeUploads = freeUploads.filter((_, i) => i !== idx);
+  }
+
+  const TYPE_LABELS = { all:'All', body:'Body', hair:'Hair', outfit:'Outfit', expression:'Face', bg:'BG', accessory:'Accessory', weapon:'Weapons', clothing:'Clothing' };
   const RARITY_COLS = { common:'var(--text3)', rare:'var(--accent3)', epic:'#aa44ff', legendary:'var(--gold-color)' };
 </script>
 
@@ -158,6 +228,10 @@
       <button class="stab" class:active={appState.shopTab==='craft' || !!appState.activeCraftsman}
         onclick={() => { appState.shopTab='craft'; appState.activeCraftsman=null; }}>
         {isHacker ? 'CRAFTSMEN' : '⚒ Craftsmen'}
+      </button>
+      <button class="stab" class:active={appState.shopTab==='upload'}
+        onclick={() => { appState.shopTab='upload'; appState.activeCraftsman=null; uploadDone=false; }}>
+        {isHacker ? 'UPLOAD' : '📁 Upload'}
       </button>
     </div>
   </div>
@@ -231,6 +305,78 @@
       {/each}
     </div>
 
+  {:else if appState.shopTab === 'upload' && !appState.activeCraftsman}
+    <!-- ══════ FREE UPLOAD ══════ -->
+    <div class="upload-panel">
+      <div class="upload-panel-intro">
+        {#if isHacker}
+          // draw it yourself · upload PNG · pick layer · free · select multiple files at once
+        {:else}
+          Draw your own character parts and upload them directly — no gold needed 🌿<br>
+          <span style="color:var(--accent); font-size:10px;">You can select as many files as you like at once.</span>
+        {/if}
+      </div>
+
+      {#if !uploadDone}
+        <!-- Drop zone — always visible, opens multi-file picker -->
+        <div class="upload-zone"
+          onclick={() => freeFileInput?.click()}
+          onkeydown={e => e.key === 'Enter' && freeFileInput?.click()}
+          role="button" tabindex="0">
+          <span class="upload-icon">🎨</span>
+          <span class="upload-hint">
+            {#if isHacker}// click to select images · multiple files allowed
+            {:else}Click to select your drawings · pick as many as you want
+            {/if}
+          </span>
+          {#if freeUploads.length > 0}
+            <span class="upload-count-badge">{freeUploads.length} queued</span>
+          {/if}
+        </div>
+        <input bind:this={freeFileInput} type="file" accept="image/*" multiple style="display:none" onchange={onFreeFileChange} />
+
+        {#if freeUploads.length > 0}
+          <!-- Per-item edit cards -->
+          <div class="queue-grid">
+            {#each freeUploads as u, i}
+              <div class="queue-card">
+                <button class="queue-remove" onclick={() => removeUpload(i)} title="Remove">×</button>
+                <img src={u.dataUrl} alt="preview" class="queue-preview" />
+                <input class="cf-input queue-name" type="text" bind:value={u.label}
+                  placeholder={isHacker ? 'name...' : 'Item name...'} />
+                <select class="cf-input cf-select queue-select" bind:value={u.layerType}>
+                  {#each LAYER_TYPES as lt}
+                    <option value={lt.value}>{lt.label}</option>
+                  {/each}
+                </select>
+                <input class="cf-input queue-desc" type="text" bind:value={u.desc}
+                  placeholder={isHacker ? 'desc...' : 'Description (optional)'} />
+              </div>
+            {/each}
+          </div>
+
+          <button class="btn primary" onclick={doFreeUpload}
+            disabled={!freeUploads.some(u => u.label.trim())}>
+            {#if isHacker}UPLOAD ALL ({freeUploads.length})
+            {:else}📁 Add all {freeUploads.length} item{freeUploads.length > 1 ? 's' : ''} to inventory (free)
+            {/if}
+          </button>
+        {/if}
+
+      {:else}
+        <div class="craft-done">
+          <span class="done-icon">✨</span>
+          <div>
+            <div>{isHacker ? `// ${uploadedCount} item(s) uploaded` : `${uploadedCount} item${uploadedCount > 1 ? 's' : ''} added to your inventory!`}</div>
+            <div class="done-sub">{isHacker ? '// equip from profile page' : 'Equip them from your profile page 🌿'}</div>
+          </div>
+          <button class="btn" onclick={() => { uploadDone = false; }}>
+            {isHacker ? 'UPLOAD MORE' : '+ Upload more'}
+          </button>
+        </div>
+      {/if}
+    </div>
+
   {:else if appState.activeCraftsman}
     <!-- ══════ CRAFTSMAN CHAT ══════ -->
     <div class="chat-view">
@@ -299,6 +445,13 @@
             bind:value={craftDesc}
             placeholder={isHacker ? 'description (optional)...' : 'Short description (optional)'}
           />
+
+          <select class="cf-input cf-select" bind:value={craftLayerType}>
+            <option value="">{isHacker ? '// layer: use craftsman default' : 'Layer: use craftsman default'}</option>
+            {#each LAYER_TYPES as lt}
+              <option value={lt.value}>{lt.label}</option>
+            {/each}
+          </select>
 
           <button class="btn primary" onclick={doSubmit} disabled={!craftInput.trim() || !uploadedImg}>
             {isHacker
@@ -479,4 +632,44 @@
 }
 .done-icon { font-size:20px; }
 .done-sub  { font-size:10px; color:var(--text3); margin-top:2px; }
+
+.cf-select {
+  appearance:none; -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center;
+  padding-right:28px; cursor:pointer;
+}
+
+.upload-panel { display:flex; flex-direction:column; gap:12px; }
+.upload-panel-intro { font-size:11px; color:var(--text3); font-family:var(--font-mono); line-height:1.6; }
+
+.upload-count-badge {
+  font-size:10px; font-family:var(--font-mono); color:var(--accent);
+  background:var(--bg2); border:1px solid var(--accent);
+  border-radius:var(--radius); padding:2px 8px; margin-top:4px;
+}
+
+.queue-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(155px, 1fr)); gap:10px; }
+.queue-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-lg); padding:10px 10px 9px;
+  display:flex; flex-direction:column; gap:6px; position:relative;
+  transition:border-color .15s;
+}
+.queue-card:hover { border-color:var(--border2); }
+.queue-remove {
+  position:absolute; top:5px; right:5px;
+  background:none; border:none; color:var(--text3);
+  font-size:15px; line-height:1; cursor:pointer;
+  padding:1px 5px; border-radius:var(--radius);
+}
+.queue-remove:hover { color:var(--hp-color); background:var(--bg3); }
+.queue-preview {
+  width:48px; height:48px; image-rendering:pixelated;
+  border-radius:var(--radius); border:1px solid var(--border);
+  align-self:center; margin-bottom:2px;
+}
+.queue-name   { font-size:12px !important; padding:5px 8px !important; }
+.queue-select { font-size:11px !important; padding:4px 26px 4px 8px !important; }
+.queue-desc   { font-size:11px !important; padding:4px 8px !important; }
 </style>

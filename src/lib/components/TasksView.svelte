@@ -2,6 +2,8 @@
   // @ts-ignore
   import { appState, tickChunk, createTask, notify, collectTask } from '$lib/stores/appState.svelte.js';
   // @ts-ignore
+  import { pushTaskToCalendar, syncCalendars, getCalendarAccounts, invalidateAccountCache } from '$lib/calendar.js';
+  // @ts-ignore
   import { onMount } from 'svelte';
 
   let isHacker = $derived(appState.theme === 'hacker');
@@ -94,6 +96,105 @@
   // @ts-ignore
   let inputHistory = $state([]);
 
+  // ── Tab completion state ──
+  // @ts-ignore
+  let tabState = $state({ completions: [], index: -1, base: '' });
+
+  const TOP_CMDS   = ['cal', 'clear', 'done', 'grep', 'help', 'history', 'log', 'ls', 'new'];
+  const CAL_SUBS   = ['accounts', 'add', 'calendars', 'link', 'sync', 'update'];
+  const CAL_FLAGS  = ['--account', '--cal', '--date', '--duration', '--invite', '--recur', '--time'];
+  const RECUR_VALS = ['daily', 'monthly', 'none', 'weekly'];
+
+  // @ts-ignore
+  async function getTabCompletions(input) {
+    const endsWithSpace = input.endsWith(' ');
+    const parts   = input.trimStart().split(/\s+/).filter(Boolean);
+    const cmd     = parts[0]?.toLowerCase() ?? '';
+    const sub     = parts[1]?.toLowerCase() ?? '';
+    const current = endsWithSpace ? '' : (parts[parts.length - 1] ?? '');
+    const prev    = endsWithSpace ? parts[parts.length - 1] : parts[parts.length - 2];
+
+    // Completing the first word
+    if (parts.length === 0 || (parts.length === 1 && !endsWithSpace)) {
+      return TOP_CMDS.filter(c => c.startsWith(current));
+    }
+
+    if (cmd !== 'cal') return [];
+
+    // cal <sub>
+    if (parts.length === 1 || (parts.length === 2 && !endsWithSpace)) {
+      return CAL_SUBS.filter(s => s.startsWith(current));
+    }
+
+    if (!['add', 'update'].includes(sub)) return [];
+
+    // cal add/update completions
+    const prevLower = (prev ?? '').toLowerCase();
+
+    if (prevLower === '--account') {
+      const accounts = await getCalendarAccounts();
+      return accounts.map(/** @type {any} */ (a) => a.google_email).filter(/** @type {any} */ (e) => e.startsWith(current));
+    }
+
+    if (prevLower === '--cal') {
+      const accountMatch = input.match(/--account\s+(\S+)/);
+      if (accountMatch) {
+        const accounts = await getCalendarAccounts();
+        const acc = accounts.find(/** @type {any} */ (a) => a.google_email === accountMatch[1]);
+        const cals = (acc?.selected_calendars ?? []).filter(/** @type {any} */ (c) => c.enabled);
+        return cals
+          .map(/** @type {any} */ (c) => c.name.includes(' ') ? `"${c.name}"` : c.name)
+          .filter(/** @type {any} */ (n) => n.toLowerCase().startsWith(current.toLowerCase()));
+      }
+      return [];
+    }
+
+    if (prevLower === '--recur') {
+      return RECUR_VALS.filter(v => v.startsWith(current));
+    }
+
+    if (current.startsWith('-')) {
+      return CAL_FLAGS.filter(f => f.startsWith(current));
+    }
+
+    return [];
+  }
+
+  // @ts-ignore
+  async function handleTab(e) {
+    e.preventDefault();
+
+    // If we have active completions, cycle through them
+    if (tabState.completions.length > 0) {
+      tabState.index = (tabState.index + 1) % tabState.completions.length;
+      _applyCompletion(tabState.base, tabState.completions[tabState.index]);
+      return;
+    }
+
+    // Otherwise compute completions fresh
+    const completions = await getTabCompletions(termInput);
+    if (completions.length === 0) return;
+
+    // Save the current input as the base (prefix before the current token)
+    const endsWithSpace = termInput.endsWith(' ');
+    const parts = termInput.trimStart().split(/\s+/).filter(Boolean);
+    const base  = endsWithSpace
+      ? termInput
+      : termInput.slice(0, termInput.lastIndexOf(parts[parts.length - 1]));
+
+    tabState = { completions, index: 0, base };
+    _applyCompletion(base, completions[0]);
+  }
+
+  // @ts-ignore
+  function _applyCompletion(base, completion) {
+    termInput = base + completion;
+  }
+
+  function _resetTab() {
+    tabState = { completions: [], index: -1, base: '' };
+  }
+
   function scrollTerm() {
     // @ts-ignore
     setTimeout(() => { if (termEl) termEl.scrollTop = termEl.scrollHeight; }, 20);
@@ -106,11 +207,12 @@
   }
 
   // @ts-ignore
-  function parseAndRun(raw) {
+  async function parseAndRun(raw) {
     const trimmed = raw.trim();
     if (!trimmed) return;
     inputHistory.unshift(trimmed);
     historyIdx = -1;
+    _resetTab();
     termHistory.push({ type: 'input', text: `> ${trimmed}` });
     const parts = trimmed.split(/\s+/);
     const cmd   = parts[0].toLowerCase();
@@ -119,14 +221,22 @@
       termHistory.push({ type: 'out', text: 'COMMANDS:' });
       termHistory.push({ type: 'out', text: '  new "task title" [--diff easy|med|hard] [--chunk N] [--time N]' });
       termHistory.push({ type: 'out', text: '  ls              list active tasks' });
-      termHistory.push({ type: 'out', text: '  done <id>       tick a chunk on task by index' });
+      termHistory.push({ type: 'out', text: '  done <idx>      tick a chunk on task by index' });
       termHistory.push({ type: 'out', text: '  grep <query>    search task history' });
-      termHistory.push({ type: 'out', text: '  history         show all completed tasks' });
-      termHistory.push({ type: 'out', text: '  log --date YYYY-MM-DD         tasks on a specific day' });
-      termHistory.push({ type: 'out', text: '  log --from YYYY-MM-DD --to YYYY-MM-DD   date range' });
+      termHistory.push({ type: 'out', text: '  history         show completed tasks' });
+      termHistory.push({ type: 'out', text: '  log --date YYYY-MM-DD  |  --from X --to Y' });
       termHistory.push({ type: 'out', text: '  clear           clear terminal' });
-      termHistory.push({ type: 'sys', text: '// --chunk overrides default chunk count' });
-      termHistory.push({ type: 'sys', text: '// --time sets minutes per chunk (affects XP/gold)' });
+      termHistory.push({ type: 'out', text: 'CALENDAR COMMANDS (hacker-mode only):' });
+      termHistory.push({ type: 'out', text: '  cal link                     open Google OAuth to add an account' });
+      termHistory.push({ type: 'out', text: '  cal accounts                 list linked Google accounts' });
+      termHistory.push({ type: 'out', text: '  cal calendars --account <email>  list calendars for account' });
+      termHistory.push({ type: 'out', text: '  cal sync                     pull latest events from all calendars' });
+      termHistory.push({ type: 'out', text: '  cal add <idx> --account <email> --cal <name> --date YYYY-MM-DD --time HH:MM' });
+      termHistory.push({ type: 'out', text: '                [--duration <mins>] [--recur daily|weekly|monthly] [--invite a@b.com,c@d.com]' });
+      termHistory.push({ type: 'out', text: '  cal update <idx> [same flags as add]  update existing calendar event' });
+      termHistory.push({ type: 'sys', text: '// Tab autocompletes commands, flags, accounts, calendars, and recur values.' });
+    } else if (cmd === 'cal') {
+      await runCal(parts.slice(1), trimmed);
     } else if (cmd === 'ls') {
       // @ts-ignore
       const active = appState.tasks.filter(t => !t.collected);
@@ -242,8 +352,141 @@
     scrollTerm();
   }
 
+  // ── cal command handler ──
+  // @ts-ignore
+  async function runCal(args, raw) {
+    const sub = args[0]?.toLowerCase();
+
+    if (!sub || sub === 'help') {
+      termHistory.push({ type: 'out', text: '  cal link | accounts | calendars | sync | add | update' });
+
+    } else if (sub === 'link') {
+      termHistory.push({ type: 'sys', text: '// Opening Google OAuth in new tab…' });
+      window.open('/auth/google-calendar', '_blank', 'width=500,height=640');
+      invalidateAccountCache();
+
+    } else if (sub === 'accounts') {
+      termHistory.push({ type: 'sys', text: '// Fetching linked accounts…' });
+      try {
+        const accs = await getCalendarAccounts();
+        if (accs.length === 0) {
+          termHistory.push({ type: 'out', text: '  (none linked — run "cal link")' });
+        } else {
+          accs.forEach(/** @type {any} */ (a, i) => {
+            const cals = (a.selected_calendars ?? []).filter(/** @type {any} */ (c) => c.enabled);
+            termHistory.push({ type: 'out', text: `  [${i}] ${a.google_email}`, sub: `${cals.length} calendar(s) enabled` });
+          });
+        }
+      } catch { termHistory.push({ type: 'err', text: 'ERROR: could not fetch accounts.' }); }
+
+    } else if (sub === 'calendars') {
+      const emailMatch = raw.match(/--account\s+(\S+)/i);
+      if (!emailMatch) { termHistory.push({ type: 'err', text: 'ERROR: cal calendars --account <email>' }); return; }
+      termHistory.push({ type: 'sys', text: `// Fetching calendars for ${emailMatch[1]}…` });
+      try {
+        const accs = await getCalendarAccounts();
+        const acc  = accs.find(/** @type {any} */ (a) => a.google_email === emailMatch[1]);
+        if (!acc) { termHistory.push({ type: 'err', text: `ERROR: no linked account for ${emailMatch[1]}` }); return; }
+        const res  = await fetch(`/api/calendar/calendars?accountId=${acc.id}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const enabledIds = new Set((acc.selected_calendars ?? []).filter(/** @type {any} */ (c) => c.enabled).map(/** @type {any} */ (c) => c.id));
+        data.calendars.forEach(/** @type {any} */ (c, i) => {
+          const state = enabledIds.has(c.id) ? '[ON] ' : '[OFF]';
+          termHistory.push({ type: 'out', text: `  ${state} ${c.name}`, sub: c.id });
+        });
+      } catch (/** @type {any} */ e) { termHistory.push({ type: 'err', text: `ERROR: ${e.message}` }); }
+
+    } else if (sub === 'sync') {
+      termHistory.push({ type: 'sys', text: '// Syncing calendars…' });
+      try {
+        await syncCalendars();
+        termHistory.push({ type: 'ok', text: 'SYNC COMPLETE' });
+      } catch (/** @type {any} */ e) { termHistory.push({ type: 'err', text: `SYNC FAILED: ${e.message}` }); }
+
+    } else if (sub === 'add' || sub === 'update') {
+      // cal add <idx> --account <email> --cal <name> --date YYYY-MM-DD --time HH:MM [--duration N] [--recur X] [--invite emails]
+      const isUpdate   = sub === 'update';
+      const idxStr     = args[1];
+      const emailMatch = raw.match(/--account\s+(\S+)/i);
+      const calMatch   = raw.match(/--cal\s+("([^"]+)"|(\S+))/i);
+      const dateMatch  = raw.match(/--date\s+(\d{4}-\d{2}-\d{2})/i);
+      const timeMatch  = raw.match(/--time\s+(\d{2}:\d{2})/i);
+      const durMatch   = raw.match(/--duration\s+(\d+)/i);
+      const recurMatch = raw.match(/--recur\s+(daily|weekly|monthly|none)/i);
+      const invMatch   = raw.match(/--invite\s+(\S+)/i);
+
+      if (!emailMatch || !calMatch || !dateMatch || !timeMatch) {
+        termHistory.push({ type: 'err', text: 'ERROR: required: --account <email> --cal <name> --date YYYY-MM-DD --time HH:MM' });
+        termInput = ''; scrollTerm(); return;
+      }
+
+      const taskIdx = parseInt(idxStr);
+      const active  = appState.tasks.filter(/** @type {any} */ (t) => !t.collected);
+      const task    = isNaN(taskIdx) ? null : active[taskIdx];
+
+      if (isNaN(taskIdx) || !task) {
+        termHistory.push({ type: 'err', text: `ERROR: invalid task index. Use "ls" to list.` });
+        termInput = ''; scrollTerm(); return;
+      }
+
+      const calName    = calMatch[2] ?? calMatch[3];
+      const duration   = durMatch ? parseInt(durMatch[1]) : Math.round((task.chunks * task.chunkMins) || 60);
+      const recur      = recurMatch?.[1] ?? 'none';
+      const invitees   = invMatch ? invMatch[1].split(',').map(/** @type {any} */ (s) => s.trim()) : [];
+
+      // Look up the calendarId from the account's selected_calendars
+      const accs = await getCalendarAccounts();
+      const acc  = accs.find(/** @type {any} */ (a) => a.google_email === emailMatch[1]);
+      if (!acc) { termHistory.push({ type: 'err', text: `ERROR: no linked account for ${emailMatch[1]}` }); termInput = ''; scrollTerm(); return; }
+      const calEntry = (acc.selected_calendars ?? []).find(/** @type {any} */ (c) => c.name === calName || c.id === calName);
+      if (!calEntry) { termHistory.push({ type: 'err', text: `ERROR: calendar "${calName}" not found in account. Use "cal calendars --account ${emailMatch[1]}" to list.` }); termInput = ''; scrollTerm(); return; }
+
+      const eventId = isUpdate ? (task.calendarEventId ?? null) : null;
+
+      termHistory.push({ type: 'sys', text: `// ${isUpdate ? 'Updating' : 'Creating'} calendar event…` });
+      try {
+        const result = await pushTaskToCalendar({
+          accountEmail: emailMatch[1],
+          calendarId:   calEntry.id,
+          title:        task.title,
+          date:         dateMatch[1],
+          time:         timeMatch[1],
+          durationMins: duration,
+          recur,
+          invitees,
+          eventId,
+        });
+
+        // Pin the task so future syncs don't overwrite it
+        task.calendarPinned       = true;
+        task.calendarEventId      = result.eventId;
+        task.calendarAccountEmail = emailMatch[1];
+        task.calendarId           = calEntry.id;
+
+        termHistory.push({ type: 'ok', text: `EVENT ${isUpdate ? 'UPDATED' : 'CREATED'}: ${task.title}` });
+        termHistory.push({ type: 'sys', text: `// ${result.htmlLink}` });
+      } catch (/** @type {any} */ e) {
+        termHistory.push({ type: 'err', text: `ERROR: ${e.message}` });
+      }
+
+    } else {
+      termHistory.push({ type: 'err', text: `UNKNOWN cal subcommand: "${sub}". Try "cal help".` });
+    }
+
+    termInput = '';
+    scrollTerm();
+  }
+
   // @ts-ignore
   function onTermKey(e) {
+    if (e.key === 'Tab') {
+      handleTab(e);
+      return;
+    }
+    // Any non-Tab key resets tab cycling
+    if (e.key !== 'Shift') _resetTab();
+
     if (e.key === 'Enter') {
       parseAndRun(termInput);
     } else if (e.key === 'ArrowUp') {

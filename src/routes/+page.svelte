@@ -22,10 +22,11 @@
   });
 </script>
 
-<!-- Focus view: full-screen overlay, no topbar/sidebar -->
-{#if isFocus}
-  <FocusView />
-{:else}
+<!-- FocusView is always mounted so running timers survive tab switches.
+     It hides itself with display:none when not active. -->
+<FocusView visible={isFocus} />
+
+{#if !isFocus}
   <div class="app-shell">
     <TopBar />
     <div class="body-row">
@@ -50,7 +51,7 @@
 <Notifications />
 
 <style>
-  .app-shell    { display:flex; flex-direction:column; height:100dvh; overflow:hidden; zoom:1.5; }
-  .body-row     { display:flex; flex:1; overflow:hidden; }
-  .main-content { flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg); transition:background .2s; }
+  .app-shell    { display:flex; flex-direction:column; min-height:100dvh; zoom:1.5; }
+  .body-row     { display:flex; flex:1; min-height:0; }
+  .main-content { flex:1; display:flex; flex-direction:column; overflow-y:auto; background:var(--bg); transition:background .2s; }
 </style>

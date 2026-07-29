@@ -1,5 +1,9 @@
 <script>
   import { appState, toggleTheme, setTab } from '$lib/stores/appState.svelte.js';
+  import AuthModal from '$lib/components/AuthModal.svelte';
+  import CalendarAccountsModal from '$lib/components/CalendarAccountsModal.svelte';
+
+  let showAuth = $state(false);
 
   const tabs = [
     { id: 'tasks',   cottage: '📋 Tasks',   hacker: 'TASKS',   retro: '👾 TASKS'  },
@@ -63,8 +67,26 @@
     <button class="toggle-btn" onclick={toggleTheme}>
       {NEXT_THEME_LABEL[appState.theme] || '🌿 Cottage'}
     </button>
+    <button class="auth-btn" onclick={() => showAuth = true} title={appState.user ? 'Account' : 'Sign in'}>
+      {#if appState.user}
+        {#if isHacker}[SYNC:ON]{:else if isRetro}📡{:else}☁️{/if}
+      {:else}
+        {#if isHacker}[SYNC:OFF]{:else if isRetro}🔌{:else}Sign in{/if}
+      {/if}
+    </button>
+    <button class="auth-btn" onclick={() => appState.showCalendarModal = true} title="Calendar accounts">
+      {#if isHacker}[CAL]{:else if isRetro}📆{:else}📅{/if}
+    </button>
   </div>
 </header>
+
+{#if showAuth}
+  <AuthModal onclose={() => showAuth = false} />
+{/if}
+
+{#if appState.showCalendarModal}
+  <CalendarAccountsModal onclose={() => appState.showCalendarModal = false} />
+{/if}
 
 <style>
 .topbar {
@@ -130,6 +152,14 @@
   white-space:nowrap; transition:all .15s;
 }
 .toggle-btn:hover { background:var(--border); color:var(--text); }
+
+.auth-btn {
+  padding:4px 10px; font-size:11px; font-family:var(--font-ui);
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--radius); color:var(--text2); cursor:pointer;
+  white-space:nowrap; transition:all .15s;
+}
+.auth-btn:hover { background:var(--border); color:var(--text); }
 :global([data-theme="hacker"]) .toggle-btn { font-family:var(--font-mono); font-size:10px; }
 :global([data-theme="retro"])  .toggle-btn { font-family:var(--font-mono); font-size:10px; letter-spacing:1px; border-color:#3300aa; }
 :global([data-theme="retro"])  .toggle-btn:hover { border-color:#ffee00; color:#ffee00; box-shadow:0 0 6px #ffee0066; }

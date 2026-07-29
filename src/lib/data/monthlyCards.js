@@ -1,0 +1,37 @@
+// src/lib/data/monthlyCards.js
+// One entry per calendar month. Add future months here as needed.
+// Keys must be 'YYYY-MM'. label, icon, and desc are display-only.
+
+export const MONTHLY_CARD_DATA = {
+  '2025-06': { label: 'Jun: Solstice',  icon: '☀️',  desc: 'June 2025 · the beginning' },
+  '2025-07': { label: 'Jul: Tide',      icon: '🌊',  desc: 'July 2025 · flow with the current' },
+  '2025-08': { label: 'Aug: Ember',     icon: '🔥',  desc: 'August 2025 · burn steady' },
+  '2025-09': { label: 'Sep: Harvest',   icon: '🍂',  desc: 'September 2025 · collect what you planted' },
+  '2025-10': { label: 'Oct: Veil',      icon: '🌑',  desc: 'October 2025 · the thinning of things' },
+  '2025-11': { label: 'Nov: Fog',       icon: '🌫️', desc: 'November 2025 · visibility low, pace steady' },
+  '2025-12': { label: 'Dec: Lantern',   icon: '🏮',  desc: 'December 2025 · light in the long dark' },
+  '2026-01': { label: 'Jan: Frost',     icon: '❄️',  desc: 'January 2026 · cold start, clear mind' },
+  '2026-02': { label: 'Feb: Drift',     icon: '🌬️', desc: 'February 2026 · let it settle' },
+  '2026-03': { label: 'Mar: Thaw',      icon: '🫧',  desc: 'March 2026 · things begin to move' },
+  '2026-04': { label: 'Apr: Cipher',    icon: '🔐',  desc: 'April 2026 · decode the pattern' },
+  '2026-05': { label: 'May: Bloom',     icon: '🌸',  desc: 'May 2026 · something is growing' },
+  '2026-06': { label: 'Jun: Haze',      icon: '🌿',  desc: 'June 2026 · warm and full of motion' },
+  '2026-07': { label: 'Jul: Mirage',    icon: '🌅',  desc: 'July 2026 · keep going' },
+  '2026-08': { label: 'Aug: Monsoon',   icon: '🌧️', desc: 'August 2026 · let it rain' },
+  '2026-09': { label: 'Sep: Amber',     icon: '🍁',  desc: 'September 2026 · things hold colour' },
+  '2026-10': { label: 'Oct: Shadow',    icon: '🕸️', desc: 'October 2026 · the archive grows' },
+  '2026-11': { label: 'Nov: Iron',      icon: '⚙️',  desc: 'November 2026 · built to last' },
+  '2026-12': { label: 'Dec: Solstice',  icon: '✨',  desc: 'December 2026 · the year closes' },
+  '2027-01': { label: 'Jan: Silence',   icon: '🤍',  desc: 'January 2027 · space to begin' },
+  '2027-02': { label: 'Feb: Pulse',     icon: '❤️',  desc: 'February 2027 · something alive here' },
+  '2027-03': { label: 'Mar: Bloom',     icon: '🌺',  desc: 'March 2027 · second spring' },
+  '2027-04': { label: 'Apr: Fracture',  icon: '⚡',  desc: 'April 2027 · break and rebuild' },
+  '2027-05': { label: 'May: Ritual',    icon: '🕯️', desc: 'May 2027 · the practice deepens' },
+  '2027-06': { label: 'Jun: Prism',     icon: '🔮',  desc: 'June 2027 · light through glass' },
+  '2027-07': { label: 'Jul: Zenith',    icon: '🌟',  desc: 'July 2027 · peak of the arc' },
+  '2027-08': { label: 'Aug: Flux',      icon: '🌀',  desc: 'August 2027 · everything in motion' },
+  '2027-09': { label: 'Sep: Archive',   icon: '📚',  desc: 'September 2027 · the record grows' },
+  '2027-10': { label: 'Oct: Phantom',   icon: '👻',  desc: 'October 2027 · haunt the old patterns' },
+  '2027-11': { label: 'Nov: Ruin',      icon: '🏚️', desc: 'November 2027 · beautiful wreckage' },
+  '2027-12': { label: 'Dec: Epoch',     icon: '🌍',  desc: 'December 2027 · end of an era' },
+};

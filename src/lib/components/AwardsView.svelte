@@ -20,16 +20,55 @@ let badgeCounts = $derived(() => {
   return counts;
 });
 
-// All possible badges (from rules), plus any earned ones not in rules (legacy)
-let allBadges = $derived(() => {
-  const ruleIds = new Set(ACHIEVEMENT_RULES.map(r => r.id));
-  const extra   = appState.awards.filter(a => !ruleIds.has(a.id));
-  // deduplicate extra by id
+// Only show badges the player has actually earned (unique defs, preserve earn order)
+let earnedBadgeDefs = $derived(() => {
+  const seen  = new Set();
+  /** @type {any[]} */
+  const defs  = [];
+  for (const a of appState.awards) {
+    if (!seen.has(a.id)) {
+      seen.add(a.id);
+      const rule = ACHIEVEMENT_RULES.find(r => r.id === a.id);
+      // fall back to award itself for legacy badges not in rules
+      defs.push(rule ?? a);
+    }
+  }
+  return defs;
+});
+
+// ── Working towards: progress computation ─────────────────────────────────
+// @ts-ignore
+function computeProgress(rule) {
+  const pl = appState.player;
+  switch (rule.id) {
+    case 'first_task':   return { pct: Math.min(1, pl.totalDone / 1),   label: `${pl.totalDone}/1 task` };
+    case 'ten_tasks':    return { pct: Math.min(1, pl.totalDone / 10),  label: `${pl.totalDone}/10 tasks` };
+    case 'fifty_tasks':  return { pct: Math.min(1, pl.totalDone / 50),  label: `${pl.totalDone}/50 tasks` };
+    case 'streak_7':     return { pct: Math.min(1, (pl.longestStreak||0) / 7),   label: `${pl.longestStreak||0}/7 day streak` };
+    case 'streak_30':    return { pct: Math.min(1, (pl.longestStreak||0) / 30),  label: `${pl.longestStreak||0}/30 day streak` };
+    case 'level_5':      return { pct: Math.min(1, pl.level / 5),  label: `Level ${pl.level}/5` };
+    case 'hard_5':       { const n = appState.taskHistory.filter((t) => t.difficulty === 'hard').length; return { pct: Math.min(1, n/5), label: `${n}/5 hard tasks` }; }
+    case 'focus_50':     return { pct: Math.min(1, (pl.focusUses||0) / 50),  label: `${pl.focusUses||0}/50 focus sessions` };
+    case 'focus_500':    return { pct: Math.min(1, (pl.focusUses||0) / 500), label: `${pl.focusUses||0}/500 focus sessions` };
+    case 'learning_10':  return { pct: Math.min(1, (pl.attributes.learning||0) / 10),  label: `${pl.attributes.learning||0}/10 learning tasks` };
+    case 'learning_50':  return { pct: Math.min(1, (pl.attributes.learning||0) / 50),  label: `${pl.attributes.learning||0}/50 learning tasks` };
+    case 'creative_10':  return { pct: Math.min(1, (pl.attributes.creativity||0) / 10), label: `${pl.attributes.creativity||0}/10 creative actions` };
+    case 'time_100h':    return { pct: Math.min(1, (pl.totalTime||0) / 6000), label: `${Math.round((pl.totalTime||0)/60)}h/100h logged` };
+    default: return null;
+  }
+}
+
+let workingTowards = $derived(() => {
+  const results = [];
+  for (const rule of ACHIEVEMENT_RULES) {
+    if (rule.repeatable) continue;
+    if (badgeCounts()[rule.id]) continue; // already earned
+    const prog = computeProgress(rule);
+    if (prog && prog.pct > 0.20) results.push({ rule, ...prog });
+  }
   // @ts-ignore
-  const seen = new Set();
-  // @ts-ignore
-  const uniqueExtra = extra.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
-  return [...ACHIEVEMENT_RULES, ...uniqueExtra];
+  results.sort((a, b) => b.pct - a.pct);
+  return results.slice(0, 4);
 });
 
 // ── Monthly card helpers ────────────────────────────────────────────────────
@@ -205,33 +244,30 @@ let curMS = $derived(appState.monthlyStats[CUR_KEY]);
     </div>
   </div>
 
-  <!-- ── Badge Collection ────────────────────────────────────────────────── -->
+  <!-- ── Badge Collection (earned only) ───────────────────────────────── -->
   <div class="section-label">{isHacker ? '-- BADGE_COLLECTION --' : 'Badge Collection'}</div>
-  <div class="awards-grid">
-    {#each allBadges() as rule}
-      {@const count   = badgeCounts()[rule.id] || 0}
-      {@const earned  = count > 0}
-      <button
-        class="award-chip type-{rule.type}"
-        class:earned
-        class:selected={selectedBadge?.id === rule.id}
-        onclick={() => selectedBadge = selectedBadge?.id === rule.id ? null : { ...rule, count }}
-        title="{rule.desc}"
-      >
-        <span class="award-icon" class:unearned-icon={!earned}>{rule.icon}</span>
-        <span class="award-label">{rule.label}</span>
-        {#if count > 1}
-          <span class="count-badge">×{count}</span>
-        {/if}
-        {#if !earned}
-          <span class="locked-badge">{isHacker ? '–' : '🔒'}</span>
-        {/if}
-        {#if rule.type === 'special' && earned}
-          <span class="special-badge">{isHacker ? 'SPEC' : '★'}</span>
-        {/if}
-      </button>
-    {/each}
-  </div>
+  {#if earnedBadgeDefs().length === 0}
+    <div class="empty-badges">
+      {isHacker ? '// no badges acquired yet — complete tasks to earn them' : 'No badges yet — complete tasks and streaks to earn them 🌱'}
+    </div>
+  {:else}
+    <div class="awards-grid">
+      {#each earnedBadgeDefs() as rule}
+        {@const count = badgeCounts()[rule.id] || 0}
+        <button
+          class="award-chip type-{rule.type} earned"
+          class:selected={selectedBadge?.id === rule.id}
+          onclick={() => selectedBadge = selectedBadge?.id === rule.id ? null : { ...rule, count }}
+          title="{rule.desc}"
+        >
+          <span class="award-icon">{rule.icon}</span>
+          <span class="award-label">{rule.label}</span>
+          {#if count > 1}<span class="count-badge">×{count}</span>{/if}
+          {#if rule.type === 'special'}<span class="special-badge">{isHacker ? 'SPEC' : '★'}</span>{/if}
+        </button>
+      {/each}
+    </div>
+  {/if}
 
   <!-- Selected badge detail -->
   {#if selectedBadge}
@@ -285,23 +321,23 @@ let curMS = $derived(appState.monthlyStats[CUR_KEY]);
     </div>
   </div>
 
-  <!-- Past + future cards strip (most recent 6 past + next 3 upcoming) -->
+  <!-- Past cards strip (current + past only — no future) -->
   <div class="month-strip">
     {#each ALL_MONTH_KEYS as key}
       {@const status = monthStatus(key)}
-      {#if status !== 'active'}
+      {#if status === 'past'}
         {@const md  = monthData(key)}
         {@const ms  = appState.monthlyStats[key]}
-        {@const prs = status === 'past' ? computePRs(key) : []}
+        {@const prs = computePRs(key)}
         <button
-          class="month-chip status-{status}"
+          class="month-chip status-past"
           class:expanded={expandedMonthKey === key}
           onclick={() => expandedMonthKey = expandedMonthKey === key ? null : key}
         >
           <span class="mc-icon">{md.icon}</span>
           <span class="mc-label">{md.label.split(':')[0]}</span>
           {#if prs.length > 0}<span class="mc-pr">★</span>{/if}
-          {#if ms && status === 'past'}<span class="mc-tasks">{ms.tasks || 0}</span>{/if}
+          {#if ms}<span class="mc-tasks">{ms.tasks || 0}</span>{/if}
         </button>
       {/if}
     {/each}
@@ -356,19 +392,25 @@ let curMS = $derived(appState.monthlyStats[CUR_KEY]);
     {isHacker ? '> view_all_months()' : '📅 View all months'}
   </button>
 
-  <!-- ── Working Towards ────────────────────────────────────────────────── -->
-  <div class="section-label">{isHacker ? '-- NEXT_UNLOCK --' : 'Working Towards'}</div>
-  {#each ACHIEVEMENT_RULES.filter(r => !badgeCounts()[r.id] && !r.repeatable).slice(0, 3) as rule}
+  <!-- ── Working Towards (only show badges you're actually close to) ──── -->
+  {#if workingTowards().length > 0}
+  <div class="section-label">{isHacker ? '-- WORKING_TOWARDS --' : 'Working Towards'}</div>
+  {#each workingTowards() as item}
     <div class="progress-card">
       <div class="progress-top">
-        <span class="progress-icon">{rule.icon}</span>
+        <span class="progress-icon">{item.rule.icon}</span>
         <div class="progress-body">
-          <div class="progress-title">{isHacker ? rule.label.toUpperCase().replace(/ /g,'_') : rule.label}</div>
-          <div class="progress-desc">{rule.desc}</div>
+          <div class="progress-title">{isHacker ? item.rule.label.toUpperCase().replace(/ /g,'_') : item.rule.label}</div>
+          <div class="progress-desc">{item.label}</div>
         </div>
+        <span class="progress-pct">{Math.round(item.pct * 100)}%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" style="width:{item.pct * 100}%"></div>
       </div>
     </div>
   {/each}
+  {/if}
 
   <!-- Unlock note -->
   <div class="unlock-note">
@@ -509,6 +551,9 @@ let curMS = $derived(appState.monthlyStats[CUR_KEY]);
 }
 .view-all-btn:hover { border-color:var(--accent3); color:var(--accent3); }
 
+/* ── Empty badges ──────────────────────────────────────────────────────── */
+.empty-badges { font-size:11px; color:var(--text3); font-family:var(--font-mono); padding:16px 0; text-align:center; }
+
 /* ── Progress cards ────────────────────────────────────────────────────── */
 .progress-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:11px 13px; display:flex; flex-direction:column; gap:8px; }
 .progress-top { display:flex; align-items:center; gap:10px; }
@@ -517,6 +562,9 @@ let curMS = $derived(appState.monthlyStats[CUR_KEY]);
 .progress-title { font-size:13px; font-weight:600; color:var(--text); }
 :global([data-theme="hacker"]) .progress-title { font-family:var(--font-mono); font-size:11px; color:var(--accent); letter-spacing:.5px; }
 .progress-desc { font-size:11px; color:var(--text3); font-family:var(--font-mono); }
+.progress-pct { font-size:11px; font-family:var(--font-mono); color:var(--accent); font-weight:700; flex-shrink:0; }
+.progress-bar-track { height:5px; background:var(--bg3); border-radius:3px; overflow:hidden; border:1px solid var(--border); }
+.progress-bar-fill { height:100%; background:var(--accent); border-radius:3px; transition:width .4s; }
 
 /* ── Unlock note ───────────────────────────────────────────────────────── */
 .unlock-note {
