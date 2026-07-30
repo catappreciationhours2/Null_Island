@@ -15,6 +15,11 @@ export async function GET(event) {
   const env = event.platform?.env ?? process.env;
   const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID;
 
+  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'placeholder') {
+    // Secret not configured in Cloudflare Workers dashboard
+    throw redirect(303, '/?cal_error=missing_client_id');
+  }
+
   const origin      = event.url.origin;
   const redirectUri = `${origin}/auth/google-calendar/callback`;
 

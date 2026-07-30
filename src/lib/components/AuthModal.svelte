@@ -36,9 +36,12 @@
 
   async function signOut() {
     loading = 'out';
-    await supabase.auth.signOut();
+    // Race against a 6-second timeout — signOut's network request can hang
+    const timeout = new Promise(resolve => setTimeout(resolve, 6000));
+    await Promise.race([supabase.auth.signOut().catch(() => {}), timeout]);
     appState.user = null;
     loading = '';
+    onclose?.();
   }
 </script>
 
