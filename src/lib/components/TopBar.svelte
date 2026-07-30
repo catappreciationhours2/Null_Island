@@ -54,12 +54,12 @@
   </nav>
 
   <div class="right-cluster">
-    <span class="stat">
+    <span class="stat mobile-hide">
       {#if isHacker}STREAK:{appState.player.streak}d
       {:else if isRetro}×{appState.player.streak} COMBO
       {:else}🔥 {appState.player.streak}d{/if}
     </span>
-    <span class="stat gold">
+    <span class="stat gold mobile-hide">
       {#if isHacker}GOLD:{appState.player.gold}
       {:else if isRetro}🪙{appState.player.gold}
       {:else}💰 {appState.player.gold}{/if}
@@ -143,6 +143,7 @@
 .right-cluster { display:flex; align-items:center; gap:10px; flex-shrink:0; }
 .stat { font-size:11px; font-family:var(--font-mono); color:var(--text2); white-space:nowrap; }
 .stat.gold { color:var(--gold-color); }
+@media (max-width: 768px) { .mobile-hide { display: none; } }
 :global([data-theme="retro"]) .stat { font-size:10px; letter-spacing:1px; }
 :global([data-theme="retro"]) .stat.gold { color:#ffbb00; text-shadow:0 0 5px #ffbb0066; }
 .toggle-btn {
