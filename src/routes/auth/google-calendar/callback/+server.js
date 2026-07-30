@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '$env/static/private';
+import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '$env/dynamic/private';
 import { createSupabaseServerClient } from '$lib/supabase.js';
 
 /**

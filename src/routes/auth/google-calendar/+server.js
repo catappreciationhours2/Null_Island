@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { GOOGLE_CLIENT_ID } from '$env/static/private';
+import { GOOGLE_CLIENT_ID } from '$env/dynamic/private';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
