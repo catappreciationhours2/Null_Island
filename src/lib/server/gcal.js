@@ -2,20 +2,26 @@
  * src/lib/server/gcal.js
  * Server-only Google Calendar helpers (token refresh, API calls).
  * Never import from client-side code.
+ *
+ * Google credentials are NOT imported via $env — adapter-cloudflare resolves
+ * $env/dynamic/private from platform.env at runtime only, with no build-time
+ * key list. Callers must read credentials from `event.platform?.env ?? process.env`
+ * and pass them here.
  */
-import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '$env/dynamic/private';
 
 /**
  * Refresh an expired Google access token.
- * Returns the new access_token and updated expiry ISO string.
+ * @param {string} refreshToken
+ * @param {string} clientId
+ * @param {string} clientSecret
  */
-export async function refreshAccessToken(refreshToken) {
+export async function refreshAccessToken(refreshToken, clientId, clientSecret) {
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id:     GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
+      client_id:     clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type:    'refresh_token',
     }),
@@ -31,15 +37,19 @@ export async function refreshAccessToken(refreshToken) {
 /**
  * Get a valid access token for a calendar account row.
  * Refreshes and updates Supabase if expired.
+ * @param {*} supabase
+ * @param {*} account
+ * @param {string} clientId
+ * @param {string} clientSecret
  */
-export async function getValidToken(supabase, account) {
+export async function getValidToken(supabase, account, clientId, clientSecret) {
   const isExpired = account.token_expiry
     ? new Date(account.token_expiry).getTime() < Date.now() + 60_000
     : true; // treat missing expiry as expired
 
   if (!isExpired) return account.access_token;
 
-  const { accessToken, expiry } = await refreshAccessToken(account.refresh_token);
+  const { accessToken, expiry } = await refreshAccessToken(account.refresh_token, clientId, clientSecret);
 
   await supabase
     .from('calendar_accounts')

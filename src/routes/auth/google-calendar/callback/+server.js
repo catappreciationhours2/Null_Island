@@ -1,5 +1,4 @@
 import { redirect } from '@sveltejs/kit';
-import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '$env/dynamic/private';
 import { createSupabaseServerClient } from '$lib/supabase.js';
 
 /**
@@ -12,6 +11,10 @@ export async function GET(event) {
   const code = url.searchParams.get('code');
 
   if (!code) throw redirect(303, '/?cal_error=no_code');
+
+  const env = event.platform?.env ?? process.env;
+  const GOOGLE_CLIENT_ID     = env.GOOGLE_CLIENT_ID;
+  const GOOGLE_CLIENT_SECRET = env.GOOGLE_CLIENT_SECRET;
 
   const supabase    = createSupabaseServerClient(event);
   const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));

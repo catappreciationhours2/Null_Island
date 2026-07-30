@@ -37,13 +37,15 @@ export async function POST(event) {
   const toUpdate = [];
   const seenEventIds = new Set();
 
+  const gcalEnv = event.platform?.env ?? process.env;
+
   for (const account of accounts) {
     const enabledCals = (account.selected_calendars ?? []).filter(c => c.enabled);
     if (!enabledCals.length) continue;
 
     let token;
     try {
-      token = await getValidToken(supabase, account);
+      token = await getValidToken(supabase, account, gcalEnv.GOOGLE_CLIENT_ID, gcalEnv.GOOGLE_CLIENT_SECRET);
     } catch (e) {
       console.error(`Token refresh failed for ${account.google_email}:`, e);
       continue;

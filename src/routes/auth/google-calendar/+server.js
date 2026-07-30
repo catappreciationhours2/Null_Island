@@ -1,5 +1,4 @@
 import { redirect } from '@sveltejs/kit';
-import { GOOGLE_CLIENT_ID } from '$env/dynamic/private';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
@@ -13,6 +12,9 @@ const SCOPES = [
  * Usage: navigate to /auth/google-calendar
  */
 export async function GET(event) {
+  const env = event.platform?.env ?? process.env;
+  const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID;
+
   const origin      = event.url.origin;
   const redirectUri = `${origin}/auth/google-calendar/callback`;
 

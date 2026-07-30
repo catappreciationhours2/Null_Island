@@ -45,9 +45,10 @@ export async function POST(event) {
 
   if (!account) return json({ error: `No linked account for ${accountEmail}` }, { status: 404 });
 
+  const gcalEnv = event.platform?.env ?? process.env;
   let token;
   try {
-    token = await getValidToken(supabase, account);
+    token = await getValidToken(supabase, account, gcalEnv.GOOGLE_CLIENT_ID, gcalEnv.GOOGLE_CLIENT_SECRET);
   } catch (e) {
     return json({ error: `Token refresh failed: ${e.message}` }, { status: 500 });
   }

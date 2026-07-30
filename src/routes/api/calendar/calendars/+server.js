@@ -21,7 +21,8 @@ export async function GET(event) {
   if (error || !account) return json({ error: 'account not found' }, { status: 404 });
 
   try {
-    const token     = await getValidToken(supabase, account);
+    const gcalEnv = event.platform?.env ?? process.env;
+    const token     = await getValidToken(supabase, account, gcalEnv.GOOGLE_CLIENT_ID, gcalEnv.GOOGLE_CLIENT_SECRET);
     const calendars = await listCalendars(token);
     return json({
       calendars: calendars.map(c => ({
