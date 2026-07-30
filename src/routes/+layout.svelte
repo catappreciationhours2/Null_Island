@@ -44,6 +44,22 @@
       history.replaceState({}, '', '/');
     }
 
+    // Show calendar error if redirected back with an error
+    const calError = new URLSearchParams(window.location.search).get('cal_error');
+    if (calError) {
+      const messages = {
+        missing_client_id: 'Google Calendar: GOOGLE_CLIENT_ID is not configured in Cloudflare.',
+        not_signed_in: 'Google Calendar: you must be signed in first.',
+        no_code: 'Google Calendar: OAuth returned no code.',
+        oauth_failed: 'Google Calendar: OAuth exchange failed.',
+      };
+      appState.notifications = [
+        ...(appState.notifications ?? []),
+        { id: Date.now(), message: messages[calError] ?? `Calendar error: ${calError}`, type: 'error' }
+      ];
+      history.replaceState({}, '', '/');
+    }
+
     // ── PWA: service worker registration ───────────────────────────────────
     if ('serviceWorker' in navigator) {
       try {

@@ -88,7 +88,7 @@
   }
 
   function addAccount() {
-    window.open('/auth/google-calendar', '_blank', 'width=500,height=600');
+    window.location.href = '/auth/google-calendar';
   }
 
   // Fetch accounts on mount
