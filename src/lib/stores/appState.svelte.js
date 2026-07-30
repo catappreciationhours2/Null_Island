@@ -10,7 +10,6 @@ import { SHOP_DEFAULT_ITEMS as _SHOP_DEFAULT_ITEMS } from '$lib/data/shopItems.j
 import { NPC_CRAFTSMEN as _NPC_CRAFTSMEN } from '$lib/data/craftsmen.js';
 import { ACHIEVEMENT_RULES as _ACHIEVEMENT_RULES } from '$lib/data/achievementRules.js';
 import { DEFAULT_INVENTORY as _DEFAULT_INVENTORY } from '$lib/data/defaultInventory.js';
-import { DEFAULT_AWARDS as _DEFAULT_AWARDS } from '$lib/data/defaultAwards.js';
 
 // ─────────────────────────────────────────
 // PERSISTENCE HELPERS
@@ -81,7 +80,7 @@ const DEFAULT_PLAYER = {
 // (edit src/lib/data/defaultInventory.js)
 const DEFAULT_INVENTORY = _DEFAULT_INVENTORY;
 // (edit src/lib/data/defaultAwards.js)
-const DEFAULT_AWARDS = _DEFAULT_AWARDS.map(a => ({ ...a, earnedAt: Date.now() }));
+const DEFAULT_AWARDS = [];
 // (edit src/lib/data/shopItems.js)
 const SHOP_DEFAULT_ITEMS = _SHOP_DEFAULT_ITEMS;
 
