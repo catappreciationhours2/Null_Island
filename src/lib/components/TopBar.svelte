@@ -115,15 +115,8 @@
   to   { clip-path:polygon(0% 0%,100% 0%,100% 100%,0% 100%); }
 }
 
-/* ── Mobile: brand abbreviations ── */
+/* ── Mobile: brand abbreviations (default hidden; shown only on mobile) ── */
 .brand-abbr { display: none; align-items: center; gap: 6px; }
-
-@media (max-width: 768px) {
-  .tabs       { display: none; }
-  .toggle-btn { display: none; }
-  .brand-full { display: none; }
-  .brand-abbr { display: inline-flex; }
-}
 
 .tabs { display:flex; gap:1px; flex:1; overflow-x:auto; scrollbar-width:none; }
 .tabs::-webkit-scrollbar { display:none; }
@@ -175,4 +168,12 @@
 :global([data-theme="hacker"]) .toggle-btn { font-family:var(--font-mono); font-size:10px; }
 :global([data-theme="retro"])  .toggle-btn { font-family:var(--font-mono); font-size:10px; letter-spacing:1px; border-color:#3300aa; }
 :global([data-theme="retro"])  .toggle-btn:hover { border-color:#ffee00; color:#ffee00; box-shadow:0 0 6px #ffee0066; }
+
+/* ── Mobile overrides (must come last to override base rules above) ── */
+@media (max-width: 768px) {
+  .tabs       { display: none; }
+  .toggle-btn { display: none; }
+  .brand-full { display: none; }
+  .brand-abbr { display: inline-flex; }
+}
 </style>

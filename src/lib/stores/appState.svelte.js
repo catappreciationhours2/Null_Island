@@ -248,6 +248,12 @@ $effect.root(() => {
   $effect(() => { save('hw-blooms',        appState.blooms); });
   $effect(() => { save('hw-task-pos',      appState.taskPositions); });
   $effect(() => { save('hw-monthly-stats', appState.monthlyStats); });
+  // Keep data-theme attribute in sync whenever theme changes
+  $effect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.theme = appState.theme;
+    }
+  });
 });
 
 // ─────────────────────────────────────────

@@ -12,10 +12,11 @@
   import ShopView      from '$lib/components/ShopView.svelte';
   import FocusView     from '$lib/components/FocusView.svelte';
 
-  let isFocus     = $derived(appState.activeTab === 'focus');
-  let drawerOpen  = $state(false);
-  let touchStartX = 0;
-  let touchStartY = 0;
+  let isFocus          = $derived(appState.activeTab === 'focus');
+  let drawerOpen       = $state(false);
+  let touchStartX      = 0;
+  let touchStartY      = 0;
+  let drawerTouchStartX = 0;
 
   const TABS = [
     { id: 'tasks',   cottage: '📋 Tasks',   hacker: 'TASKS',   retro: '👾 TASKS'   },
@@ -50,10 +51,18 @@
     if (dx < 0 && drawerOpen)       drawerOpen = false;  // left-swipe closes
   }
 
+  function onDrawerTouchStart(e) {
+    drawerTouchStartX = e.touches[0].clientX;
+  }
+
+  function onDrawerTouchEnd(e) {
+    const dx = e.changedTouches[0].clientX - drawerTouchStartX;
+    if (dx < -60) drawerOpen = false; // swipe left closes drawer
+  }
+
   onMount(() => {
-    const saved = localStorage.getItem('hw-theme') || 'cottage';
-    appState.theme = saved;
-    document.documentElement.dataset.theme = saved;
+    // On mobile, always land on tasks view
+    if (window.innerWidth <= 768) appState.activeTab = 'tasks';
   });
 </script>
 
@@ -66,7 +75,10 @@
 {/if}
 
 <!-- Mobile slide-in drawer -->
-<nav class="mobile-drawer" class:open={drawerOpen} aria-label="Navigation">
+<nav class="mobile-drawer" class:open={drawerOpen} aria-label="Navigation"
+  ontouchstart={onDrawerTouchStart}
+  ontouchend={onDrawerTouchEnd}
+>
   <div class="drawer-header">
     <span class="drawer-brand">
       {#if appState.theme === 'hacker'}&gt; NULL_ISLAND
