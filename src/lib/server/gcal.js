@@ -3,7 +3,7 @@
  * Server-only Google Calendar helpers (token refresh, API calls).
  * Never import from client-side code.
  */
-import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '$env/static/private';
+import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '$env/dynamic/private';
 
 /**
  * Refresh an expired Google access token.
