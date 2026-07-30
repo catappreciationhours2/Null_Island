@@ -30,13 +30,14 @@
 <header class="topbar" class:retro={isRetro}>
   <div class="brand">
     {#if isHacker}
-      <span class="prompt">&gt;</span> NULL_ISLAND_OS
+      <span class="brand-full"><span class="prompt">&gt;</span> NULL_ISLAND_OS</span>
+      <span class="brand-abbr"><span class="prompt">&gt;</span> NI</span>
     {:else if isRetro}
-      <span class="retro-brand">
-        <span class="pac">●</span> NULL ISLAND
-      </span>
+      <span class="brand-full retro-brand"><span class="pac">●</span> NULL ISLAND</span>
+      <span class="brand-abbr retro-brand"><span class="pac">●</span> NI</span>
     {:else}
-      <span class="leaf">🌿</span> Null_Island
+      <span class="brand-full">🌿 Null Island</span>
+      <span class="brand-abbr">🌿 NI</span>
     {/if}
   </div>
 
@@ -112,6 +113,16 @@
 @keyframes pacMouth {
   from { clip-path:polygon(0% 0%,100% 25%,100% 75%,0% 100%); }
   to   { clip-path:polygon(0% 0%,100% 0%,100% 100%,0% 100%); }
+}
+
+/* ── Mobile: brand abbreviations ── */
+.brand-abbr { display: none; align-items: center; gap: 6px; }
+
+@media (max-width: 768px) {
+  .tabs       { display: none; }
+  .toggle-btn { display: none; }
+  .brand-full { display: none; }
+  .brand-abbr { display: inline-flex; }
 }
 
 .tabs { display:flex; gap:1px; flex:1; overflow-x:auto; scrollbar-width:none; }

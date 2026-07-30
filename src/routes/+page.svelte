@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { appState, setTab } from '$lib/stores/appState.svelte.js';
+  import { appState, setTab, toggleTheme } from '$lib/stores/appState.svelte.js';
 
   import TopBar        from '$lib/components/TopBar.svelte';
   import Sidebar       from '$lib/components/Sidebar.svelte';
@@ -89,6 +89,15 @@
   </div>
 
   <div class="drawer-divider"></div>
+
+  <!-- Theme toggle inside drawer on mobile -->
+  <div class="drawer-theme-row">
+    <button class="drawer-theme-btn" onclick={toggleTheme}>
+      {#if appState.theme === 'hacker'}👾 Switch to Retro
+      {:else if appState.theme === 'retro'}🌿 Switch to Cottage
+      {:else}⌨ Switch to Hacker{/if}
+    </button>
+  </div>
 
   <!-- Full sidebar content inside drawer on mobile -->
   <div class="drawer-sidebar-wrap">
@@ -249,6 +258,27 @@
     flex-shrink: 0;
   }
   :global([data-theme="retro"]) .drawer-divider { background: #3300aa; }
+
+  .drawer-theme-row {
+    padding: 0 10px 10px;
+    flex-shrink: 0;
+  }
+  .drawer-theme-btn {
+    width: 100%;
+    text-align: left;
+    padding: 9px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    font-size: 12px;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    transition: background .12s, color .12s;
+  }
+  .drawer-theme-btn:hover { background: var(--border); color: var(--text); }
+  :global([data-theme="hacker"]) .drawer-theme-btn { font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px; border-color: var(--accent); color: var(--accent); }
+  :global([data-theme="retro"])  .drawer-theme-btn { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; border-color: #ffee00; color: #ffee00; text-shadow: 0 0 4px #ffee0066; }
 
   .drawer-sidebar-wrap {
     flex: 1;
