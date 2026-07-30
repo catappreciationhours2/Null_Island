@@ -252,6 +252,54 @@
 
   let pendingTasks      = $derived(appState.tasks.filter(t => t.doneChunks >= t.chunks && !t.collected));
   let anniversaryNotice = $derived(snapshots.find(s => s.featured)?.anniversaryLabel ?? null);
+
+  // ── Pinch-to-zoom / pan ───────────────────────────────────────────────────
+  let scale  = $state(1);
+  let panX   = $state(0);
+  let panY   = $state(0);
+  let pinchDist0 = 0;
+  let isPanning  = false;
+  let panStart   = { x: 0, y: 0, px: 0, py: 0 };
+  let touchCount = 0;
+
+  function getPinchDist(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  function onMapTouchStart(e) {
+    touchCount = e.touches.length;
+    if (e.touches.length === 2) {
+      pinchDist0 = getPinchDist(e.touches);
+    } else if (e.touches.length === 1 && scale > 1) {
+      isPanning = true;
+      panStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, px: panX, py: panY };
+    }
+  }
+
+  function onMapTouchMove(e) {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      const dist = getPinchDist(e.touches);
+      const ratio = dist / pinchDist0;
+      scale = Math.max(0.5, Math.min(4, scale * ratio));
+      pinchDist0 = dist;
+    } else if (e.touches.length === 1 && isPanning) {
+      panX = panStart.px + (e.touches[0].clientX - panStart.x);
+      panY = panStart.py + (e.touches[0].clientY - panStart.y);
+    }
+  }
+
+  function onMapTouchEnd(e) {
+    if (e.touches.length < 2) isPanning = false;
+    touchCount = e.touches.length;
+  }
+
+  function onMapWheel(e) {
+    e.preventDefault();
+    scale = Math.max(0.5, Math.min(4, scale * (1 - e.deltaY * 0.001)));
+  }
 </script>
 
 <div class="mv" class:hacker={isHacker} class:retro={isRetro}>
@@ -277,17 +325,26 @@
     </div>
   </div>
 
-  <div class="canvas-wrap">
-    <canvas bind:this={canvasEl}  width={CW} height={CH} class="layer grid-layer"></canvas>
-    <canvas bind:this={overlayEl} width={CW} height={CH} class="layer overlay-layer"
-      tabindex="0" onclick={onCanvasClick}
-      aria-label="World map — click stars to collect rewards, arrow keys to move"
-    ></canvas>
+  <div class="canvas-wrap"
+    ontouchstart={onMapTouchStart}
+    ontouchmove={onMapTouchMove}
+    ontouchend={onMapTouchEnd}
+    onwheel={onMapWheel}
+    style="touch-action:none; overflow:hidden"
+  >
+    <div style="transform: scale({scale}) translate({panX/scale}px, {panY/scale}px); transform-origin: center center; transition: transform 0.05s linear">
+      <canvas bind:this={canvasEl}  width={CW} height={CH} class="layer grid-layer"></canvas>
+      <canvas bind:this={overlayEl} width={CW} height={CH} class="layer overlay-layer"
+        tabindex="0" onclick={onCanvasClick}
+        aria-label="World map — click stars to collect rewards, arrow keys to move"
+      ></canvas>
+    </div>
     <div class="key-hint">
       {isHacker ? '// ← ↑ ↓ → · click ★ to collect'
       : isRetro  ? '← ↑ ↓ → · CLICK ★ TO COLLECT'
       :            'Arrow keys to move · click ★ to collect'}
     </div>
+    <button class="zoom-reset" onclick={() => { scale=1; panX=0; panY=0; }} aria-label="Reset zoom">⟳ Reset</button>
   </div>
 
   {#if pendingTasks.length > 0}
@@ -386,6 +443,12 @@
 .key-hint { position:absolute; bottom:7px; left:9px; z-index:3; font-size:9px; font-family:var(--font-mono); color:rgba(100,80,60,0.45); pointer-events:none; }
 .hacker .key-hint { color:rgba(0,255,65,0.28); }
 .retro  .key-hint { color:rgba(255,238,0,0.3); letter-spacing:1px; }
+.zoom-reset { position:absolute; top:7px; right:9px; z-index:3; font-size:9px; font-family:var(--font-mono); padding:2px 7px; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg2); color:var(--text3); cursor:pointer; opacity:.7; transition:opacity .15s; }
+.zoom-reset:hover { opacity:1; color:var(--text); }
+.hacker .zoom-reset { border-color:#1a3a1a; color:#00aa30; background:#050e05; }
+.hacker .zoom-reset:hover { color:#00ff41; }
+.retro  .zoom-reset { border-color:#3300aa; color:#5500cc; background:#0a0010; border-radius:0; }
+.retro  .zoom-reset:hover { color:#ffee00; border-color:#ffee00; }
 .reward-list   { display:flex; flex-direction:column; gap:6px; }
 .section-label { font-size:10px; font-family:var(--font-mono); color:var(--text3); letter-spacing:.8px; text-transform:uppercase; padding-bottom:4px; border-bottom:1px solid var(--border); margin-bottom:2px; }
 .hacker .section-label { color:#00ff41; border-color:#1a3a1a; }

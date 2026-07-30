@@ -1,6 +1,6 @@
 <script>
   // @ts-ignore
-  import { appState, tickChunk, createTask, notify, collectTask } from '$lib/stores/appState.svelte.js';
+  import { appState, tickChunk, untickChunk, createTask, notify, collectTask } from '$lib/stores/appState.svelte.js';
   // @ts-ignore
   import { pushTaskToCalendar, syncCalendars, getCalendarAccounts, invalidateAccountCache } from '$lib/calendar.js';
   // @ts-ignore
@@ -512,6 +512,41 @@
 
   // Pellet colours — each pellet in a track gets one of these
   const PELLET_COLS = ['#ffee00','#ff8800','#ff4488','#00ccff','#00ff88','#aa44ff'];
+
+  // ── Mobile swipe state for cottage task cards ──
+  let swipeState = $state({});
+
+  function swipeStart(e, taskId) {
+    swipeState[taskId] = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      x: 0, active: true, committed: false
+    };
+  }
+
+  function swipeMove(e, taskId) {
+    const s = swipeState[taskId];
+    if (!s?.active) return;
+    const dx = e.touches[0].clientX - s.startX;
+    const dy = e.touches[0].clientY - s.startY;
+    // If more vertical than horizontal early on, cancel
+    if (!s.committed && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+      swipeState[taskId] = { ...s, active: false };
+      return;
+    }
+    if (Math.abs(dx) > 6) {
+      e.preventDefault();
+      swipeState[taskId] = { ...s, x: dx, committed: true };
+    }
+  }
+
+  function swipeEnd(e, taskId) {
+    const s = swipeState[taskId];
+    if (!s) return;
+    if (s.x < -60) tickChunk(taskId);
+    else if (s.x > 60) untickChunk(taskId);
+    swipeState[taskId] = { x: 0, startX: 0, startY: 0, active: false, committed: false };
+  }
 </script>
 
 <div class="tasks-view">
@@ -556,7 +591,16 @@
     {#if activeTasks.length > 0}
       <div class="task-section-label">Active</div>
       {#each activeTasks as task (task.id)}
-        <div class="task-card">
+      {@const sx = swipeState[task.id]?.x ?? 0}
+      <div class="swipe-wrapper">
+        {#if sx < -20}<div class="swipe-hint hint-right">✓ chunk</div>{/if}
+        {#if sx > 20}<div class="swipe-hint hint-left">↩ undo</div>{/if}
+        <div class="task-card"
+          style="transform:translateX({sx}px);transition:{swipeState[task.id]?.active ? 'none' : 'transform .2s ease'}"
+          ontouchstart={e => swipeStart(e, task.id)}
+          ontouchmove={e => swipeMove(e, task.id)}
+          ontouchend={e => swipeEnd(e, task.id)}
+        >
           <div class="task-top">
             <span class="task-title">{task.title}</span>
             <span class="tag {task.difficulty}">{task.difficulty}</span>
@@ -575,7 +619,8 @@
             <button class="btn" onclick={() => tickChunk(task.id)}>✓ Tick chunk</button>
           </div>
         </div>
-      {/each}
+      </div>
+    {/each}
     {/if}
 
     {#if readyTasks.length > 0}
@@ -1022,4 +1067,9 @@
     );
   }
 }
+
+.swipe-wrapper { position:relative; overflow:hidden; border-radius:var(--radius-lg); }
+.swipe-hint { position:absolute; top:0; bottom:0; display:flex; align-items:center; padding:0 14px; font-size:11px; font-family:var(--font-mono); font-weight:600; pointer-events:none; }
+.hint-right { right:0; background:rgba(30,90,30,.9); color:#4caf50; }
+.hint-left  { left:0;  background:rgba(90,30,30,.9); color:#f44336; }
 </style>

@@ -386,6 +386,21 @@ export function tickChunk(taskId) {
 }
 
 // @ts-ignore
+export function untickChunk(taskId) {
+  // @ts-ignore
+  const task = appState.tasks.find(t => t.id === taskId);
+  if (!task || task.doneChunks <= 0) return;
+  task.doneChunks--;
+  if (task.completedAt && task.doneChunks < task.chunks) task.completedAt = null;
+  notify(
+    appState.theme === 'hacker'
+      ? `> CHUNK ${task.doneChunks}/${task.chunks} UNDONE`
+      : `Chunk undone — back to ${task.doneChunks}/${task.chunks} 🌱`,
+    'info'
+  );
+}
+
+// @ts-ignore
 export function collectTask(taskId) {
   // @ts-ignore
   const task = appState.tasks.find(t => t.id === taskId);
