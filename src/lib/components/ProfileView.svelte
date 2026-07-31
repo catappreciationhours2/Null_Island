@@ -611,6 +611,10 @@ function fmtDate(ts) {
 :global([data-theme="hacker"]) .subnav-btn { font-family:var(--font-mono); font-size:11px; letter-spacing:.8px; }
 
 .profile-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media (max-width: 768px) {
+  .profile-view { padding:10px; }
+  .profile-grid { grid-template-columns:1fr; }
+}
 .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:13px; display:flex; flex-direction:column; gap:8px; }
 .card-title { font-size:10px; font-family:var(--font-mono); color:var(--text3); letter-spacing:.8px; text-transform:uppercase; padding-bottom:6px; border-bottom:1px solid var(--border); }
 
