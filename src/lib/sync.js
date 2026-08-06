@@ -54,28 +54,37 @@ async function flushQueue(supabase) {
 // ─── Core upsert ─────────────────────────────────────────────
 /** Returns true on success. */
 async function _upsert(supabase, payload) {
+  console.log('[sync] upsert → user_id:', payload.p_user_id);
   const { error } = await supabase.rpc('upsert_user_state', payload);
-  return !error;
+  if (error) {
+    console.error('[sync] upsert FAILED:', error.message, error);
+    return false;
+  }
+  console.log('[sync] upsert OK');
+  return true;
 }
 
 // ─── Public API ───────────────────────────────────────────────
-let _timer = null;
+let _timer    = null;
 let _supabase = null;
+let _onlineListenerAdded = false;
 
 function getSupabase() {
   if (!_supabase) _supabase = createSupabaseClient();
   return _supabase;
 }
 
-/** Serialise current appState into a sync payload. */
+/** Serialise current appState into a plain (non-reactive) sync payload. */
 function buildPayload(userId) {
-  // Exclude runtime/ephemeral fields that don't need to persist
+  // Exclude runtime/ephemeral fields
   const { notifications, _notifId, user, craftConversation, ...persistable } = appState;
+  // JSON round-trip strips Svelte 5 reactive proxies → plain object Supabase can serialise cleanly
+  const plainState = JSON.parse(JSON.stringify(persistable));
   return {
     p_user_id: userId,
-    p_state:   persistable,
-    p_level:   appState.player?.level  ?? 1,
-    p_xp:      appState.player?.xp     ?? 0
+    p_state:   plainState,
+    p_level:   appState.player?.level ?? 1,
+    p_xp:      appState.player?.xp    ?? 0
   };
 }
 
@@ -85,13 +94,18 @@ function buildPayload(userId) {
  */
 export async function push() {
   const userId = appState.user?.id;
-  if (!userId) return;   // not signed in — nothing to sync
+  if (!userId) {
+    console.warn('[sync] push skipped — no user');
+    return;
+  }
 
+  console.log('[sync] push → user:', userId);
   const supabase = getSupabase();
   const payload  = buildPayload(userId);
   const ok       = await _upsert(supabase, payload);
 
   if (!ok) {
+    console.warn('[sync] push failed — queuing to IDB');
     await enqueue(payload);
   }
 }
@@ -104,6 +118,7 @@ export async function pull() {
   const userId = appState.user?.id;
   if (!userId) return false;
 
+  console.log('[sync] pull → user:', userId);
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('user_state')
@@ -112,7 +127,15 @@ export async function pull() {
     .single();
 
   // No row yet (new user) or fetch error — nothing to pull
-  if (error || !data) return false;
+  if (error) {
+    console.warn('[sync] pull error (may be new user — no row yet):', error.message, error.code);
+    return false;
+  }
+  if (!data) {
+    console.log('[sync] pull — no row found (new user)');
+    return false;
+  }
+  console.log('[sync] pull — row found, updated_at:', data.updated_at);
 
   // "Latest wins": apply cloud state only if it's newer than the last local sync
   const cloudUpdated = new Date(data.updated_at).getTime();
@@ -138,6 +161,7 @@ export async function pull() {
  * Batches rapid changes into a single network request.
  */
 export function scheduleSync(delayMs = 2000) {
+  console.log('[sync] scheduleSync — debounced push in', delayMs, 'ms');
   if (_timer) clearTimeout(_timer);
   _timer = setTimeout(() => {
     _timer = null;
@@ -153,17 +177,22 @@ export function scheduleSync(delayMs = 2000) {
 export async function initSync() {
   if (typeof window === 'undefined') return;
 
-  // Flush any queued offline writes when we come back online
-  window.addEventListener('online', async () => {
-    const supabase = getSupabase();
-    await flushQueue(supabase);
-    await push();
-  });
+  // Guard: only add the online listener once (initSync may be called on auth state change too)
+  if (!_onlineListenerAdded) {
+    _onlineListenerAdded = true;
+    window.addEventListener('online', async () => {
+      console.log('[sync] back online — flushing queue');
+      const supabase = getSupabase();
+      await flushQueue(supabase);
+      await push();
+    });
+  }
+
+  console.log('[sync] initSync — user:', appState.user?.id ?? 'none');
 
   if (appState.user) {
     await pull();
-    // Always push after pull: creates the row for new users, and uploads
-    // local state when it's newer than what's in the cloud.
+    // Always push after pull: creates the row for new users, uploads local state when newer.
     await push();
     await flushQueue(getSupabase());
   }
