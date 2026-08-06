@@ -3,13 +3,14 @@
   import { onMount } from 'svelte';
   import { createSupabaseClient } from '$lib/supabase.js';
   import { appState, setSyncHook } from '$lib/stores/appState.svelte.js';
-  import { initSync, scheduleSync } from '$lib/sync.js';
+  import { initSync, scheduleSync, setSupabaseClient } from '$lib/sync.js';
   import { startAutoSync } from '$lib/calendar.js';
 
   let { data, children } = $props();
 
-  // Browser-side Supabase client — shared via module-level singleton
+  // Browser-side Supabase client — shared with sync.js so both use the same authenticated instance
   const supabase = createSupabaseClient();
+  setSupabaseClient(supabase);
 
   // Set user immediately at component init so it's available when onMount runs.
   // The $effect below keeps it reactive for client-side navigations.

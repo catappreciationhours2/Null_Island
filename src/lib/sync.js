@@ -55,13 +55,18 @@ async function flushQueue(supabase) {
 /** Returns true on success. */
 async function _upsert(supabase, payload) {
   console.log('[sync] upsert → user_id:', payload.p_user_id);
-  const { error } = await supabase.rpc('upsert_user_state', payload);
-  if (error) {
-    console.error('[sync] upsert FAILED:', error.message, error);
+  try {
+    const { error } = await supabase.rpc('upsert_user_state', payload);
+    if (error) {
+      console.error('[sync] upsert FAILED:', error.message, error);
+      return false;
+    }
+    console.log('[sync] upsert OK');
+    return true;
+  } catch (err) {
+    console.error('[sync] upsert THREW (uncaught):', err);
     return false;
   }
-  console.log('[sync] upsert OK');
-  return true;
 }
 
 // ─── Public API ───────────────────────────────────────────────
@@ -69,8 +74,22 @@ let _timer    = null;
 let _supabase = null;
 let _onlineListenerAdded = false;
 
+/**
+ * Register the layout's already-authenticated Supabase client.
+ * Called once from +layout.svelte so sync.js reuses the same
+ * instance that has the active session, rather than a fresh one
+ * that may have not yet read the auth cookies.
+ */
+export function setSupabaseClient(client) {
+  _supabase = client;
+  console.log('[sync] supabase client set from layout');
+}
+
 function getSupabase() {
-  if (!_supabase) _supabase = createSupabaseClient();
+  if (!_supabase) {
+    console.warn('[sync] no client set — creating fallback');
+    _supabase = createSupabaseClient();
+  }
   return _supabase;
 }
 
@@ -120,11 +139,18 @@ export async function pull() {
 
   console.log('[sync] pull → user:', userId);
   const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from('user_state')
-    .select('state, updated_at')
-    .eq('user_id', userId)
-    .single();
+
+  let data, error;
+  try {
+    ({ data, error } = await supabase
+      .from('user_state')
+      .select('state, updated_at')
+      .eq('user_id', userId)
+      .single());
+  } catch (err) {
+    console.error('[sync] pull THREW (uncaught):', err);
+    return false;
+  }
 
   // No row yet (new user) or fetch error — nothing to pull
   if (error) {
@@ -191,6 +217,14 @@ export async function initSync() {
   console.log('[sync] initSync — user:', appState.user?.id ?? 'none');
 
   if (appState.user) {
+    // Verify the client's auth state before touching the DB
+    try {
+      const { data: authData, error: authError } = await getSupabase().auth.getUser();
+      console.log('[sync] auth.getUser →', authData?.user?.id ?? 'null', authError?.message ?? 'no error');
+    } catch (e) {
+      console.error('[sync] auth.getUser THREW:', e);
+    }
+
     await pull();
     // Always push after pull: creates the row for new users, uploads local state when newer.
     await push();
