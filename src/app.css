@@ -22,10 +22,17 @@
   --hp:         #c94040;
   --hp-color:   #c94040;
   --gold:       #c07030;
+  --gold-color: #c07030;
   --gold-light: #e8a84a;
+  --easy:       #7a9e5e;
+  --med:        #c07030;
+  --hard:       #c94040;
   --tag-easy:   #7a9e5e;
   --tag-med:    #c07030;
   --tag-hard:   #c94040;
+  --topbar-h:   44px;
+  --shadow:     0 2px 8px rgba(0,0,0,.12);
+  --shadow-lg:  0 4px 20px rgba(0,0,0,.18);
 
   --font-ui:    'Lora', Georgia, serif;
   --font-body:  'EB Garamond', serif;
@@ -56,12 +63,21 @@
   --accent2:    #ffb800;
   --accent3:    #00b4ff;
   --xp:         #00ff41;
+  --xp-color:   #00ff41;
   --hp:         #ff3333;
+  --hp-color:   #ff3333;
   --gold:       #ffb800;
+  --gold-color: #ffb800;
   --gold-light: #ffd060;
+  --easy:       #00ff41;
+  --med:        #ffb800;
+  --hard:       #ff3333;
   --tag-easy:   #00ff41;
   --tag-med:    #ffb800;
   --tag-hard:   #ff3333;
+  --topbar-h:   44px;
+  --shadow:     0 2px 8px rgba(0,255,65,.08);
+  --shadow-lg:  0 4px 20px rgba(0,255,65,.12);
 
   --font-ui:    'Share Tech Mono', monospace;
   --font-body:  'Share Tech Mono', monospace;
@@ -98,6 +114,11 @@
   --easy:        #00ff88;
   --med:         #ffbb00;
   --hard:        #ff4400;
+  --tag-easy:    #00ff88;
+  --tag-med:     #ffbb00;
+  --tag-hard:    #ff4400;
+  --scroll-track: #0a0010;
+  --scroll-thumb: #3300aa;
   --font-ui:     'Share Tech Mono', monospace;
   --font-body:   'Share Tech Mono', monospace;
   --font-mono:   'Share Tech Mono', monospace;
