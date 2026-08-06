@@ -98,11 +98,11 @@ export async function push() {
 
 /**
  * Pull latest state from Supabase and merge into appState.
- * Called once on startup after auth resolves.
+ * Returns true if cloud state was newer and was applied.
  */
 export async function pull() {
   const userId = appState.user?.id;
-  if (!userId) return;
+  if (!userId) return false;
 
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -111,15 +111,15 @@ export async function pull() {
     .eq('user_id', userId)
     .single();
 
-  if (error || !data) return;
+  // No row yet (new user) or fetch error — nothing to pull
+  if (error || !data) return false;
 
-  // Simple "latest wins" merge: if cloud is newer than localStorage, use cloud.
+  // "Latest wins": apply cloud state only if it's newer than the last local sync
   const cloudUpdated = new Date(data.updated_at).getTime();
   const localUpdated = parseInt(localStorage.getItem('hw-last-sync') ?? '0');
 
   if (cloudUpdated > localUpdated) {
     const remote = data.state;
-    // Overwrite each key that exists in the remote state
     for (const key of Object.keys(remote)) {
       if (key in appState) {
         // @ts-ignore
@@ -127,7 +127,10 @@ export async function pull() {
       }
     }
     localStorage.setItem('hw-last-sync', String(cloudUpdated));
+    return true;
   }
+
+  return false;
 }
 
 /**
@@ -159,6 +162,9 @@ export async function initSync() {
 
   if (appState.user) {
     await pull();
+    // Always push after pull: creates the row for new users, and uploads
+    // local state when it's newer than what's in the cloud.
+    await push();
     await flushQueue(getSupabase());
   }
 }

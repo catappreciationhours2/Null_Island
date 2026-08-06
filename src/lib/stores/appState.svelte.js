@@ -244,6 +244,7 @@ $effect.root(() => {
   $effect(() => { save('hw-tasks',         appState.tasks); });
   $effect(() => { save('hw-history',       appState.taskHistory); });
   $effect(() => { save('hw-awards',        appState.awards); });
+  $effect(() => { save('hw-inventory',     appState.inventory); });
   $effect(() => { save('hw-theme',         appState.theme); });
   $effect(() => { save('hw-blooms',        appState.blooms); });
   $effect(() => { save('hw-task-pos',      appState.taskPositions); });

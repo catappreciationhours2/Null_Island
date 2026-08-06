@@ -11,7 +11,9 @@
   // Browser-side Supabase client — shared via module-level singleton
   const supabase = createSupabaseClient();
 
-  // Reflect server-side user into client state on first load
+  // Set user immediately at component init so it's available when onMount runs.
+  // The $effect below keeps it reactive for client-side navigations.
+  appState.user = data.user ?? null;
   $effect(() => {
     appState.user = data.user ?? null;
   });
