@@ -95,16 +95,20 @@ function getSupabase() {
 
 /** Serialise current appState into a plain (non-reactive) sync payload. */
 function buildPayload(userId) {
-  // Exclude runtime/ephemeral fields
-  const { notifications, _notifId, user, craftConversation, ...persistable } = appState;
-  // JSON round-trip strips Svelte 5 reactive proxies → plain object Supabase can serialise cleanly
-  const plainState = JSON.parse(JSON.stringify(persistable));
-  return {
-    p_user_id: userId,
-    p_state:   plainState,
-    p_level:   appState.player?.level ?? 1,
-    p_xp:      appState.player?.xp    ?? 0
-  };
+  try {
+    const { notifications, _notifId, user, craftConversation, ...persistable } = appState;
+    // $state.snapshot converts Svelte 5 reactive proxies cleanly to raw objects
+    const plainState = JSON.parse(JSON.stringify(persistable));
+    return {
+      p_user_id: userId,
+      p_state:   plainState,
+      p_level:   appState.player?.level ?? 1,
+      p_xp:      appState.player?.xp    ?? 0
+    };
+  } catch (err) {
+    console.error('[sync] buildPayload failed to serialise appState:', err);
+    return null;
+  }
 }
 
 /**
@@ -118,10 +122,12 @@ export async function push() {
     return;
   }
 
+  const payload = buildPayload(userId);
+  if (!payload) return; // Stop if payload generation failed
+
   console.log('[sync] push → user:', userId);
   const supabase = getSupabase();
-  const payload  = buildPayload(userId);
-  const ok       = await _upsert(supabase, payload);
+  const ok = await _upsert(supabase, payload);
 
   if (!ok) {
     console.warn('[sync] push failed — queuing to IDB');

@@ -8,15 +8,14 @@
 
   let { data, children } = $props();
 
-  // Browser-side Supabase client — shared with sync.js so both use the same authenticated instance
+  // Create browser client
   const supabase = createSupabaseClient();
-  setSupabaseClient(supabase);
 
-  // Set user immediately at component init so it's available when onMount runs.
-  // The $effect below keeps it reactive for client-side navigations.
-  appState.user = data.user ?? null;
+  // Keep appState user synced with SvelteKit SSR data
   $effect(() => {
-    appState.user = data.user ?? null;
+    if (data.user) {
+      appState.user = data.user;
+    }
   });
 
   // Register the sync hook so any save() in appState triggers a debounced push
@@ -28,17 +27,29 @@
   let showInstall   = $state(false);
 
   onMount(async () => {
-    // Listen for auth state changes (sign-in, sign-out, token refresh)
+    // 1. Ensure sync module uses client instance in browser context
+    setSupabaseClient(supabase);
+
+    // 2. Fetch active browser session to set auth token in headers
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      appState.user = session.user;
+    }
+
+    // 3. Perform initial cloud sync
+    if (appState.user) {
+      await initSync();
+    }
+
+    // 4. Listen for auth state updates (sign-in, refresh, sign-out)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       appState.user = session?.user ?? null;
-      await initSync();
+      if (session?.user) {
+        await initSync();
+      }
     });
 
-    // Initial Supabase sync on page load
-    await initSync();
-
-    // Start calendar auto-sync (runs immediately, then every 30 min)
-    // Only if user is signed in — startAutoSync handles the guard internally
+    // Start calendar auto-sync (30 minutes interval)
     const stopCalSync = startAutoSync(30 * 60 * 1000);
 
     // Show calendar accounts modal if redirected back from Google OAuth
@@ -104,80 +115,3 @@
     installPrompt = null;
   }
 </script>
-
-{@render children()}
-
-{#if isOffline}
-  <div class="pwa-banner offline" role="status">
-    {#if appState.theme === 'hacker'}
-      ⚠ OFFLINE — changes queued locally
-    {:else if appState.theme === 'retro'}
-      📡 NO SIGNAL — saves queued
-    {:else}
-      📵 You're offline — changes will sync when reconnected
-    {/if}
-  </div>
-{/if}
-
-{#if showInstall}
-  <div class="pwa-banner install" role="status">
-    {#if appState.theme === 'hacker'}
-      [INSTALL] Add NULL_ISLAND_OS to homescreen?
-      <button onclick={triggerInstall}>INSTALL</button>
-      <button onclick={() => showInstall = false}>DISMISS</button>
-    {:else}
-      🌿 Install Null Island as an app?
-      <button onclick={triggerInstall}>Install</button>
-      <button onclick={() => showInstall = false}>Not now</button>
-    {/if}
-  </div>
-{/if}
-
-<style>
-.pwa-banner {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 8px 16px;
-  font-size: 12px;
-  font-family: var(--font-ui, system-ui, sans-serif);
-}
-.pwa-banner.offline {
-  background: #b85c38;
-  color: #fff;
-}
-.pwa-banner.install {
-  background: var(--bg2, #e8e0d0);
-  color: var(--text, #2c2c2c);
-  border-top: 1px solid var(--border, #ccc);
-}
-:global([data-theme="hacker"]) .pwa-banner.install {
-  background: #0d0d0d;
-  color: #00ff41;
-  border-top: 1px solid #00ff41;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-}
-:global([data-theme="retro"]) .pwa-banner.install {
-  background: #000;
-  color: #ffee00;
-  border-top: 2px solid #ffee00;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-}
-.pwa-banner button {
-  padding: 2px 10px;
-  font-size: 11px;
-  border-radius: 4px;
-  border: 1px solid currentColor;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-family: inherit;
-}
-.pwa-banner button:hover { opacity: 0.75; }
-</style>
