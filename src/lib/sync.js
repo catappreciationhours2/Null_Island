@@ -166,16 +166,30 @@ export async function pull() {
   const cloudUpdated = new Date(data.updated_at).getTime();
   const localUpdated = parseInt(localStorage.getItem('hw-last-sync') ?? '0');
 
-  // ALWAYS merge/apply cloud state if local storage was empty (e.g. new device/window)
-  // OR if cloud timestamp is newer than local last sync timestamp
   if (localUpdated === 0 || cloudUpdated > localUpdated) {
     console.log('[sync] Applying cloud state to appState');
     const remote = data.state;
-    for (const key of Object.keys(remote)) {
-      if (key in appState) {
-        appState[key] = remote[key];
+
+    if (remote && typeof remote === 'object') {
+      // Safely assign top-level keys
+      for (const key of Object.keys(remote)) {
+        if (key in appState && key !== 'user') {
+          // If both are objects, shallow merge to preserve nested properties
+          if (
+            typeof remote[key] === 'object' &&
+            remote[key] !== null &&
+            !Array.isArray(remote[key]) &&
+            typeof appState[key] === 'object' &&
+            appState[key] !== null
+          ) {
+            Object.assign(appState[key], remote[key]);
+          } else {
+            appState[key] = remote[key];
+          }
+        }
       }
     }
+
     localStorage.setItem('hw-last-sync', String(cloudUpdated));
     return true;
   }
