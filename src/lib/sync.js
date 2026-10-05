@@ -148,30 +148,25 @@ export async function pull() {
       .eq('user_id', userId)
       .single());
   } catch (err) {
-    console.error('[sync] pull THREW (uncaught):', err);
+    console.error('[sync] pull THREW:', err);
     return false;
   }
 
-  // No row yet (new user) or fetch error — nothing to pull
-  if (error) {
-    console.warn('[sync] pull error (may be new user — no row yet):', error.message, error.code);
+  if (error || !data) {
+    console.warn('[sync] pull error or no data:', error?.message);
     return false;
   }
-  if (!data) {
-    console.log('[sync] pull — no row found (new user)');
-    return false;
-  }
-  console.log('[sync] pull — row found, updated_at:', data.updated_at);
 
-  // "Latest wins": apply cloud state only if it's newer than the last local sync
   const cloudUpdated = new Date(data.updated_at).getTime();
   const localUpdated = parseInt(localStorage.getItem('hw-last-sync') ?? '0');
 
-  if (cloudUpdated > localUpdated) {
+  // ALWAYS merge/apply cloud state if local storage was empty (e.g. new device/window)
+  // OR if cloud timestamp is newer than local last sync timestamp
+  if (localUpdated === 0 || cloudUpdated > localUpdated) {
+    console.log('[sync] Applying cloud state to appState');
     const remote = data.state;
     for (const key of Object.keys(remote)) {
       if (key in appState) {
-        // @ts-ignore
         appState[key] = remote[key];
       }
     }
@@ -203,7 +198,6 @@ export function scheduleSync(delayMs = 2000) {
 export async function initSync() {
   if (typeof window === 'undefined') return;
 
-  // Guard: only add the online listener once (initSync may be called on auth state change too)
   if (!_onlineListenerAdded) {
     _onlineListenerAdded = true;
     window.addEventListener('online', async () => {
@@ -217,17 +211,14 @@ export async function initSync() {
   console.log('[sync] initSync — user:', appState.user?.id ?? 'none');
 
   if (appState.user) {
-    // Verify the client's auth state before touching the DB
-    try {
-      const { data: authData, error: authError } = await getSupabase().auth.getUser();
-      console.log('[sync] auth.getUser →', authData?.user?.id ?? 'null', authError?.message ?? 'no error');
-    } catch (e) {
-      console.error('[sync] auth.getUser THREW:', e);
+    // 1. Pull cloud state first
+    const appliedCloud = await pull();
+
+    // 2. ONLY push if cloud didn't exist or didn't overwrite local state
+    if (!appliedCloud) {
+      await push();
     }
 
-    await pull();
-    // Always push after pull: creates the row for new users, uploads local state when newer.
-    await push();
     await flushQueue(getSupabase());
   }
 }
