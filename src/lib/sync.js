@@ -104,7 +104,10 @@ export async function push() {
   const supabase = getSupabase();
   const ok = await _upsert(supabase, payload);
 
-  if (!ok) {
+  if (ok) {
+    // Record last sync time so pull() doesn't overwrite fresh local changes
+    localStorage.setItem('hw-last-sync', String(Date.now()));
+  } else {
     console.warn('[sync] push failed — queuing to IDB');
     await enqueue(payload);
   }
@@ -129,14 +132,12 @@ export async function pull() {
     return false;
   }
 
-  if (error || !data || !data.state) {
-    console.warn('[sync] pull error or no data:', error?.message);
-    return false;
-  }
+  if (error || !data || !data.state) return false;
 
   const cloudUpdated = new Date(data.updated_at).getTime();
   const localUpdated = parseInt(localStorage.getItem('hw-last-sync') ?? '0');
 
+  // Only apply if cloud state is actually newer than our last known sync time
   if (localUpdated === 0 || cloudUpdated > localUpdated) {
     console.log('[sync] Applying cloud state to appState');
     const remote = data.state;
@@ -146,7 +147,14 @@ export async function pull() {
       if (remote && typeof remote === 'object') {
         for (const key of Object.keys(remote)) {
           if (key in appState && key !== 'user') {
-            appState[key] = remote[key];
+            // Preserve locally pending (uncollected) tasks if remote doesn't have them
+            if (key === 'tasks' && Array.isArray(remote.tasks) && Array.isArray(appState.tasks)) {
+              const remoteIds = new Set(remote.tasks.map((t) => t.id));
+              const localUnsaved = appState.tasks.filter((t) => !remoteIds.has(t.id) && !t.collected);
+              appState.tasks = [...remote.tasks, ...localUnsaved];
+            } else {
+              appState[key] = remote[key];
+            }
           }
         }
       }
