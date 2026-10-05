@@ -1,16 +1,3 @@
-/**
- * src/lib/sync.js
- *
- * Syncs appState to Supabase with debouncing.
- * Strategy:
- *   1. Any state change calls schedulSync() — debounced 2s.
- *   2. push() serialises appState and upserts to user_state table.
- *   3. pull() fetches the latest row and merges into appState
- *      (used on first load to restore cloud save).
- *   4. IDB offline queue: if push() fails (no network), the
- *      pending flag is set and retried on next online event.
- */
-
 import { appState } from '$lib/stores/appState.svelte.js';
 import { createSupabaseClient } from '$lib/supabase.js';
 import { openDB } from 'idb';
@@ -52,7 +39,6 @@ async function flushQueue(supabase) {
 }
 
 // ─── Core upsert ─────────────────────────────────────────────
-/** Returns true on success. */
 async function _upsert(supabase, payload) {
   console.log('[sync] upsert → user_id:', payload.p_user_id);
   try {
@@ -73,13 +59,8 @@ async function _upsert(supabase, payload) {
 let _timer    = null;
 let _supabase = null;
 let _onlineListenerAdded = false;
+let _isPulling = false;
 
-/**
- * Register the layout's already-authenticated Supabase client.
- * Called once from +layout.svelte so sync.js reuses the same
- * instance that has the active session, rather than a fresh one
- * that may have not yet read the auth cookies.
- */
 export function setSupabaseClient(client) {
   _supabase = client;
   console.log('[sync] supabase client set from layout');
@@ -93,11 +74,9 @@ function getSupabase() {
   return _supabase;
 }
 
-/** Serialise current appState into a plain (non-reactive) sync payload. */
 function buildPayload(userId) {
   try {
     const { notifications, _notifId, user, craftConversation, ...persistable } = appState;
-    // $state.snapshot converts Svelte 5 reactive proxies cleanly to raw objects
     const plainState = JSON.parse(JSON.stringify(persistable));
     return {
       p_user_id: userId,
@@ -111,10 +90,6 @@ function buildPayload(userId) {
   }
 }
 
-/**
- * Push current state to Supabase.
- * Falls back to IDB queue on network failure.
- */
 export async function push() {
   const userId = appState.user?.id;
   if (!userId) {
@@ -123,7 +98,7 @@ export async function push() {
   }
 
   const payload = buildPayload(userId);
-  if (!payload) return; // Stop if payload generation failed
+  if (!payload) return;
 
   console.log('[sync] push → user:', userId);
   const supabase = getSupabase();
@@ -135,10 +110,6 @@ export async function push() {
   }
 }
 
-/**
- * Pull latest state from Supabase and merge into appState.
- * Returns true if cloud state was newer and was applied.
- */
 export async function pull() {
   const userId = appState.user?.id;
   if (!userId) return false;
@@ -158,7 +129,7 @@ export async function pull() {
     return false;
   }
 
-  if (error || !data) {
+  if (error || !data || !data.state) {
     console.warn('[sync] pull error or no data:', error?.message);
     return false;
   }
@@ -170,38 +141,29 @@ export async function pull() {
     console.log('[sync] Applying cloud state to appState');
     const remote = data.state;
 
-    if (remote && typeof remote === 'object') {
-      // Safely assign top-level keys
-      for (const key of Object.keys(remote)) {
-        if (key in appState && key !== 'user') {
-          // If both are objects, shallow merge to preserve nested properties
-          if (
-            typeof remote[key] === 'object' &&
-            remote[key] !== null &&
-            !Array.isArray(remote[key]) &&
-            typeof appState[key] === 'object' &&
-            appState[key] !== null
-          ) {
-            Object.assign(appState[key], remote[key]);
-          } else {
+    _isPulling = true;
+    try {
+      if (remote && typeof remote === 'object') {
+        for (const key of Object.keys(remote)) {
+          if (key in appState && key !== 'user') {
             appState[key] = remote[key];
           }
         }
       }
+      localStorage.setItem('hw-last-sync', String(cloudUpdated));
+    } finally {
+      _isPulling = false;
     }
 
-    localStorage.setItem('hw-last-sync', String(cloudUpdated));
     return true;
   }
 
   return false;
 }
 
-/**
- * Schedule a debounced push (called after any significant state mutation).
- * Batches rapid changes into a single network request.
- */
 export function scheduleSync(delayMs = 2000) {
+  if (_isPulling) return;
+
   console.log('[sync] scheduleSync — debounced push in', delayMs, 'ms');
   if (_timer) clearTimeout(_timer);
   _timer = setTimeout(() => {
@@ -210,11 +172,6 @@ export function scheduleSync(delayMs = 2000) {
   }, delayMs);
 }
 
-/**
- * Call once in the root layout after auth is known.
- * - Pulls cloud save if user is signed in.
- * - Sets up online/offline retry logic.
- */
 export async function initSync() {
   if (typeof window === 'undefined') return;
 
@@ -231,14 +188,10 @@ export async function initSync() {
   console.log('[sync] initSync — user:', appState.user?.id ?? 'none');
 
   if (appState.user) {
-    // 1. Pull cloud state first
     const appliedCloud = await pull();
-
-    // 2. ONLY push if cloud didn't exist or didn't overwrite local state
     if (!appliedCloud) {
       await push();
     }
-
     await flushQueue(getSupabase());
   }
 }

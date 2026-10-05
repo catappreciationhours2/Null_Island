@@ -20,15 +20,15 @@
   let showInstall   = $state(false);
 
   onMount(() => {
-    // 1. Pass browser client to sync manager immediately on mount
+    // 1. Pass browser client to sync manager
     setSupabaseClient(supabase);
 
-    // 2. Set user from SvelteKit SSR data
+    // 2. Set user from SSR data
     if (data.user) {
       appState.user = data.user;
     }
 
-    // 3. Run sync asynchronously without blocking component rendering
+    // 3. Fetch active browser session and trigger sync in background
     supabase.auth.getSession().then(({ data: sessionData }) => {
       if (sessionData?.session?.user) {
         appState.user = sessionData.session.user;
@@ -38,7 +38,7 @@
       }
     });
 
-    // 4. Listen for auth state updates (sign-in, refresh, sign-out)
+    // 4. Listen for auth state updates
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       appState.user = session?.user ?? null;
       if (session?.user) {
@@ -71,10 +71,12 @@
       history.replaceState({}, '', '/');
     }
 
-    // ── PWA: service worker registration ───────────────────────────────────
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((e) => {
-        console.warn('[PWA] SW registration failed:', e);
+    // ── PWA: Safe Service Worker Registration ──────────────────────────────
+    if ('serviceWorker' in navigator && typeof window !== 'undefined') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((e) => {
+          console.warn('[PWA] SW registration ignored:', e);
+        });
       });
     }
 
@@ -110,3 +112,80 @@
     installPrompt = null;
   }
 </script>
+
+{@render children()}
+
+{#if isOffline}
+  <div class="pwa-banner offline" role="status">
+    {#if appState.theme === 'hacker'}
+      ⚠ OFFLINE — changes queued locally
+    {:else if appState.theme === 'retro'}
+      📡 NO SIGNAL — saves queued
+    {:else}
+      📵 You're offline — changes will sync when reconnected
+    {/if}
+  </div>
+{/if}
+
+{#if showInstall}
+  <div class="pwa-banner install" role="status">
+    {#if appState.theme === 'hacker'}
+      [INSTALL] Add NULL_ISLAND_OS to homescreen?
+      <button onclick={triggerInstall}>INSTALL</button>
+      <button onclick={() => showInstall = false}>DISMISS</button>
+    {:else}
+      🌿 Install Null Island as an app?
+      <button onclick={triggerInstall}>Install</button>
+      <button onclick={() => showInstall = false}>Not now</button>
+    {/if}
+  </div>
+{/if}
+
+<style>
+.pwa-banner {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-family: var(--font-ui, system-ui, sans-serif);
+}
+.pwa-banner.offline {
+  background: #b85c38;
+  color: #fff;
+}
+.pwa-banner.install {
+  background: var(--bg2, #e8e0d0);
+  color: var(--text, #2c2c2c);
+  border-top: 1px solid var(--border, #ccc);
+}
+:global([data-theme="hacker"]) .pwa-banner.install {
+  background: #0d0d0d;
+  color: #00ff41;
+  border-top: 1px solid #00ff41;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+}
+:global([data-theme="retro"]) .pwa-banner.install {
+  background: #000;
+  color: #ffee00;
+  border-top: 2px solid #ffee00;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+}
+.pwa-banner button {
+  padding: 2px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+}
+.pwa-banner button:hover { opacity: 0.75; }
+</style>
