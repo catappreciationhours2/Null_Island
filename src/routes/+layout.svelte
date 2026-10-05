@@ -11,13 +11,6 @@
   // Create browser client
   const supabase = createSupabaseClient();
 
-  // Keep appState user synced with SvelteKit SSR data
-  $effect(() => {
-    if (data.user) {
-      appState.user = data.user;
-    }
-  });
-
   // Register the sync hook so any save() in appState triggers a debounced push
   setSyncHook(() => scheduleSync());
 
@@ -26,26 +19,30 @@
   let installPrompt = $state(/** @type {Event|null} */ (null));
   let showInstall   = $state(false);
 
-  onMount(async () => {
-    // 1. Ensure sync module uses client instance in browser context
+  onMount(() => {
+    // 1. Pass browser client to sync manager immediately on mount
     setSupabaseClient(supabase);
 
-    // 2. Fetch active browser session to set auth token in headers
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      appState.user = session.user;
+    // 2. Set user from SvelteKit SSR data
+    if (data.user) {
+      appState.user = data.user;
     }
 
-    // 3. Perform initial cloud sync
-    if (appState.user) {
-      await initSync();
-    }
+    // 3. Run sync asynchronously without blocking component rendering
+    supabase.auth.getSession().then(({ data: sessionData }) => {
+      if (sessionData?.session?.user) {
+        appState.user = sessionData.session.user;
+      }
+      if (appState.user) {
+        initSync().catch((err) => console.error('[sync] initSync failed:', err));
+      }
+    });
 
     // 4. Listen for auth state updates (sign-in, refresh, sign-out)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       appState.user = session?.user ?? null;
       if (session?.user) {
-        await initSync();
+        initSync().catch((err) => console.error('[sync] initSync failed:', err));
       }
     });
 
@@ -76,11 +73,9 @@
 
     // ── PWA: service worker registration ───────────────────────────────────
     if ('serviceWorker' in navigator) {
-      try {
-        await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      } catch (e) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((e) => {
         console.warn('[PWA] SW registration failed:', e);
-      }
+      });
     }
 
     // ── PWA: online/offline banner ──────────────────────────────────────────
@@ -100,7 +95,7 @@
 
     return () => {
       subscription.unsubscribe();
-      stopCalSync();
+      if (typeof stopCalSync === 'function') stopCalSync();
       window.removeEventListener('offline', goOffline);
       window.removeEventListener('online',  goOnline);
       window.removeEventListener('beforeinstallprompt', onBeforeInstall);
