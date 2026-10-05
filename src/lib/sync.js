@@ -139,61 +139,66 @@ export async function push() {
  * Pull latest state from Supabase and merge into appState.
  * Returns true if cloud state was newer and was applied.
  */
+// export async function pull() {
+//   const userId = appState.user?.id;
+//   if (!userId) return false;
+
+//   console.log('[sync] pull → user:', userId);
+//   const supabase = getSupabase();
+
+//   let data, error;
+//   try {
+//     ({ data, error } = await supabase
+//       .from('user_state')
+//       .select('state, updated_at')
+//       .eq('user_id', userId)
+//       .single());
+//   } catch (err) {
+//     console.error('[sync] pull THREW:', err);
+//     return false;
+//   }
+
+//   if (error || !data) {
+//     console.warn('[sync] pull error or no data:', error?.message);
+//     return false;
+//   }
+
+//   const cloudUpdated = new Date(data.updated_at).getTime();
+//   const localUpdated = parseInt(localStorage.getItem('hw-last-sync') ?? '0');
+
+//   if (localUpdated === 0 || cloudUpdated > localUpdated) {
+//     console.log('[sync] Applying cloud state to appState');
+//     const remote = data.state;
+
+//     if (remote && typeof remote === 'object') {
+//       // Safely assign top-level keys
+//       for (const key of Object.keys(remote)) {
+//         if (key in appState && key !== 'user') {
+//           // If both are objects, shallow merge to preserve nested properties
+//           if (
+//             typeof remote[key] === 'object' &&
+//             remote[key] !== null &&
+//             !Array.isArray(remote[key]) &&
+//             typeof appState[key] === 'object' &&
+//             appState[key] !== null
+//           ) {
+//             Object.assign(appState[key], remote[key]);
+//           } else {
+//             appState[key] = remote[key];
+//           }
+//         }
+//       }
+//     }
+
+//     localStorage.setItem('hw-last-sync', String(cloudUpdated));
+//     return true;
+//   }
+
+//   return false;
+// }
+
 export async function pull() {
-  const userId = appState.user?.id;
-  if (!userId) return false;
-
-  console.log('[sync] pull → user:', userId);
-  const supabase = getSupabase();
-
-  let data, error;
-  try {
-    ({ data, error } = await supabase
-      .from('user_state')
-      .select('state, updated_at')
-      .eq('user_id', userId)
-      .single());
-  } catch (err) {
-    console.error('[sync] pull THREW:', err);
-    return false;
-  }
-
-  if (error || !data) {
-    console.warn('[sync] pull error or no data:', error?.message);
-    return false;
-  }
-
-  const cloudUpdated = new Date(data.updated_at).getTime();
-  const localUpdated = parseInt(localStorage.getItem('hw-last-sync') ?? '0');
-
-  if (localUpdated === 0 || cloudUpdated > localUpdated) {
-    console.log('[sync] Applying cloud state to appState');
-    const remote = data.state;
-
-    if (remote && typeof remote === 'object') {
-      // Safely assign top-level keys
-      for (const key of Object.keys(remote)) {
-        if (key in appState && key !== 'user') {
-          // If both are objects, shallow merge to preserve nested properties
-          if (
-            typeof remote[key] === 'object' &&
-            remote[key] !== null &&
-            !Array.isArray(remote[key]) &&
-            typeof appState[key] === 'object' &&
-            appState[key] !== null
-          ) {
-            Object.assign(appState[key], remote[key]);
-          } else {
-            appState[key] = remote[key];
-          }
-        }
-      }
-    }
-
-    localStorage.setItem('hw-last-sync', String(cloudUpdated));
-    return true;
-  }
-
+  console.log('[sync] pull temporarily bypassed');
   return false;
 }
 
